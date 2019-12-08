@@ -171,7 +171,7 @@ move_config_files() {
 install_plugins() {
         log "install cacti plugins"
         cd $path/container-files/plugins/
-	if [[ "$PLUGIN_UPGRADE" = "YES" | "$PLUGIN_UPGRADE" = "yes" | "$PLUGIN_UPGRADE" = "1"  ]]
+	if [[ "$PLUGIN_UPGRADE" = "YES" || "$PLUGIN_UPGRADE" = "yes" || "$PLUGIN_UPGRADE" = "1"  ]];then
 		for dir in `ls` ; do
                 	cd $dir && git pull && cd ..
         	done
@@ -343,10 +343,10 @@ change_auth_config() {
 update_cron() {
 	log "Updating Cron jobs"
 	# Add Cron jobs
-	if [[ "$GRAPH_EXPORT" = "NO" | "$GRAPH_EXPORT" = "no" | "$GRAPH_EXPORT" = "0"  ]]; then
+	if [[ "$GRAPH_EXPORT" = "NO" || "$GRAPH_EXPORT" = "no" || "$GRAPH_EXPORT" = "0"  ]]; then
 		rm -rf /etc/cron.d/cacti_export
 	fi
-	if [[ "$DATA_BACKUP" = "NO" | "$DATA_BACKUP" = "no" | "$DATA_BACKUP" = "0"  ]]; then
+	if [[ "$DATA_BACKUP" = "NO" || "$DATA_BACKUP" = "no" || "$DATA_BACKUP" = "0"  ]]; then
 		rm -rf /etc/cron.d/cacti_backup
 	fi
 	sed -i 's#$path#'$path'#' /etc/cron.d/cacti
