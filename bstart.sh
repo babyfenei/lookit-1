@@ -1,9 +1,50 @@
 #!/bin/sh
 
-CACTI_VER=latest
 
-setenforce 0
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+printf "             +       Pls. input cacti version.Ente is laster         +\n"
+printf "             +             eg：1.1.30    1.2.6   1.2.7               +\n"
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+read CACTI_VER
+if [ ! -n "$Ver" ];then
+        CACTI_VER=laster
+fi
+
+
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+printf "             +       Pls. input rrdtool version.Ente is 1.7.0        +\n"
+printf "             +             eg：1.4.8  1.5.2   1.8.0                  +\n"
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+read RRD_VER
+if [ ! -n "$RRD_VER" ];then
+        Ver=1.7.0
+fi
+
+
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+printf "             +      Do you want to install the latest plug-in        +\n"
+printf "             +             YES:1               NO:0                  +\n"
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+read PLUGIN_UPGRADE
+
+
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+printf "             +      Do you want to enable graph auto export          +\n"
+printf "             +             YES:1               NO:0                  +\n"
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+read GRAPH_EXPORT
+
+
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+printf "             +      Do you want to enable database auto backup       +\n"
+printf "             +             YES:1               NO:0                  +\n"
+printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+read DATA_BACKUP
+
+
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+setenforce 0
+
 
 export TERM=xterm
 #Export default DB Password
@@ -16,7 +57,7 @@ path=/var/www/html
 dir_path=$(pwd)
 mkdir -p $dir_path/container-files/packages/{rrdtool,cacti,spine}
 #Please enter the characters you want to modify, which can be chinese. After the input (input enter special characters please add in front of two escape character \\)
-rrdlogo="AMSINPUL Data\\/陕西西普数据通信股份有限公司"
+rrdlogo="Cacti-$CACTI_VER\\/rrdtool-$RRDTOOL_VER\\/By:Fenei"
 echo -e "\033[35m The RRDTOOL watermark you want to modify is:$rrdlogo \033[0m"
 echo -e "\033[35m Your Cacti installation path is:$path \033[0m"
 # Bash Colors
@@ -45,18 +86,18 @@ install_dependency_packs() {
 		yum localinstall -y /packages/mysql/*
 		yum localinstall -y /packages/goffice/*
 		yum install -y  --enablerepo=remi-php56 php php-redis php-snmp php-opcache php-devel php-mbstring php-mcrypt php-mysqlnd php-phpunit-PHPUnit php-pecl-xdebug php-pecl-xhprof  php-gmp php-gd php-ldap
-		#yum install -y php php-redis php-snmp php-opcache php-devel php-mbstring php-mcrypt php-mysqlnd php-phpunit-PHPUnit php-pecl-xdebug php-pecl-xhprof  php-gmp php-gd php-ldap
-		#yum install -y mysql-community-server mysql-community-client  mysql-devel
 		yum install -y automake perl-devel   wget gzip help2man libtool make net-snmp-devel m4 openssl-devel dos2unix redis \
         	dejavu-fonts-common dejavu-lgc-sans-mono-fonts dejavu-sans-mono-fonts   \
         	net-snmp net-snmp-utils  gcc pango-devel libxml2-devel net-snmp-devel cronie \
-        	sendmail  httpd  rsyslog-mysql vim ntpdate perl-devel
+        	sendmail  httpd  rsyslog-mysql vim ntpdate perl-devel git
         	rpm --rebuilddb && yum clean all
         }
+
+
 install_rrdtool() {
         log "### Install rrdtool###"
     		mkdir -p /rrdtool/ && rm -rf /rrdtool/*
-  	  	rm -rf /packages/rrdtool/* &&  wget -O /packages/rrdtool/rrdtool.tar.gz  http://oss.oetiker.ch/rrdtool/pub/rrdtool-1.7.0.tar.gz 
+  	  	rm -rf /packages/rrdtool/* &&  wget -O /packages/rrdtool/rrdtool.tar.gz  http://oss.oetiker.ch/rrdtool/pub/rrdtool-$RRD_VER.tar.gz 
     		tar zxvf /packages/rrdtool/rrdtool*.tar.gz -C /rrdtool --strip-components=1
     		cd /rrdtool/
         	sed -i "s/RRDTOOL \/ TOBI OETIKER/$rrdlogo/g" src/rrd_graph.c
@@ -67,6 +108,7 @@ install_rrdtool() {
     		ln -s /usr/local/rrdtool/bin/rrdtool /bin/rrdtool
     		rm -rf /packages/rrdtool/rrdtool*.tar.gz && rm -rf /rrdtool
         }
+
 
 install_cacti() {
         log "### ### Install cacti"
@@ -113,6 +155,8 @@ move_cacti() {
                 log "Cacti moved"
     fi
         }
+
+
 move_config_files() {
     if [ -e "/config.php" ]; then
                 log "Moving Config files"
@@ -126,81 +170,17 @@ move_config_files() {
                 
 install_plugins() {
         log "install cacti plugins"
-        mkdir -p $dir_path/container-files/plugins/
-        cd $dir_path/container-files/plugins/
-        #git clone https://github.com/Cacti/plugin_syslog.git
-		\cp -rf /plugins/* $path/plugins/
-		chown -R apache.apache $path/plugins/
+        cd $path/container-files/plugins/
+	if [[ "$PLUGIN_UPGRADE" = "YES" | "$PLUGIN_UPGRADE" = "yes" | "$PLUGIN_UPGRADE" = "1"  ]]
+		for dir in `ls` ; do
+                	cd $dir && git pull && cd ..
+        	done
+	fi	
+	\cp -rf /plugins/* $path/plugins/
+	chown -R apache.apache $path/plugins/
         log "The Cacti plug-in installation is complete"
         }
 
-
-download_install_plugins() {
-        log "install cacti plugins"
-        mkdir -p $dir_path/container-files/plugins/
-        cd $dir_path/container-files/plugins/
-        #git clone https://github.com/Cacti/plugin_syslog.git
-        if [ ! -d "monitor" ]; then
-        	git clone https://github.com/Cacti/plugin_monitor.git
-                mv plugin_monitor monitor
-        fi
-        if [ ! -d "audit" ]; then
-                git clone https://github.com/Cacti/plugin_audit.git
-                mv plugin_audit audit
-        fi
-        if [ ! -d "thold" ]; then
-                git clone https://github.com/Cacti/plugin_thold.git
-                mv plugin_thold thold
-        fi
-        if [ ! -d "maint" ]; then
-                git clone https://github.com/Cacti/plugin_maint.git
-                mv plugin_maint maint
-        fi
-        if [ ! -d "routerconfigs" ]; then
-                git clone https://github.com/Cacti/plugin_routerconfigs.git
-                mv plugin_routerconfigs routerconfigs
-        fi
-        if [ ! -d "mactrack" ]; then
-                git clone https://github.com/Cacti/plugin_mactrack.git
-                mv plugin_mactrack mactrack
-        fi
-        if [ ! -d "hmib" ]; then
-                git clone https://github.com/Cacti/plugin_hmib.git
-        	mv plugin_hmib hmib
-	fi
-        if [ ! -d "mikrotik" ]; then
-                git clone https://github.com/Cacti/plugin_mikrotik.git
-                mv plugin_mikrotik mikrotik
-        fi
-        if [ ! -d "webseer" ]; then
-                git clone https://github.com/Cacti/plugin_webseer.git
-                mv plugin_webseer webseer
-        fi
-        if [ ! -d "flowview" ]; then
-                git clone https://github.com/Cacti/plugin_flowview.git
-                mv plugin_flowview flowview
-        fi
-        if [ ! -d "cycle" ]; then
-                git clone https://github.com/Cacti/plugin_cycle.git
-                mv plugin_cycle cycle
-        fi
-        if [ ! -d "rrdproxy" ]; then
-                git clone https://github.com/Cacti/rrdproxy.git
-        fi
-        if [ ! -d "syslog" ]; then
-                git clone https://github.com/Cacti/plugin_syslog.git
-                mv plugin_syslog syslog
-        fi 
-        if [ ! -d "reportit" ]; then
-                git clone https://github.com/Cacti/plugin_reportit.git
-                mv plugin_reportit reportit
-        fi
-	#for i in plugin_*; do mv $i ${i#plugin_}; done > /dev/null 2>&1
-        \cp -rf   * $path/plugins/
-        log "The Cacti plug-in installation is complete"
-        }
-
-                
                 
 create_db(){
     log "Creating Cacti Database"
@@ -218,11 +198,15 @@ create_db(){
   	  mysql  -e "flush privileges;"
     log "Database created successfully"
         }
+
+
 import_db() {
     log "Importing Database..."
     	mysql  cacti  < $path/cacti.sql
     log "Database Imported successfully"
        	 }
+
+
 cacti_db_update() {
     log "Update databse with cacti config details"
     	mysql  -e "INSERT INTO cacti.settings (name, value) VALUES ('font_method', '0');"
@@ -241,11 +225,15 @@ cacti_db_update() {
 	mysql  -e "INSERT INTO cacti.settings (name, value) VALUES ('realtime_cache_path', '/var/www/html/cache/');"
     log "Cacti Database updated"
         }
+
+
 spine_db_update() {
     log "Update databse with spine config details"
     mysql  -e "REPLACE INTO cacti.settings SET name='path_spine', value='/usr/bin/spine';"
     log "Database updated"
         }
+
+
 update_cacti_db_config() {
     log "Updating default Cacti config file"
     sed -i 's/$DB_ADDRESS/'$DB_ADDRESS'/g' $path/include/config.php
@@ -253,6 +241,8 @@ update_cacti_db_config() {
     sed -i 's/$DB_PASS/'$DB_PASS'/g' $path/include/config.php
     log "Config file updated with Database credentials"
         }
+
+
 update_cacti_global_config() {
     log "Updating default Cacti global config file"
     sed -i 's/$DB_ADDRESS/'$DB_ADDRESS'/g' $path/include/global.php
@@ -260,6 +250,8 @@ update_cacti_global_config() {
     sed -i 's/$DB_PASS/'$DB_PASS'/g' $path/include/global.php
     log "Config file updated with global Database credentials"
         }
+
+
 update_spine_config() {
     log "Updating Spine config file"
     if [ -e "/spine.conf" ]; then
@@ -270,6 +262,7 @@ update_spine_config() {
                 log "Spine config updated"
     fi
     }
+
 
 update_backup_config() {
     log "Updating backup config file"
@@ -283,6 +276,7 @@ update_backup_config() {
     fi
     }
 
+
 update_export_config() {
     log "Updating export config file"
     if [ -e "/bash/export.sh" ]; then
@@ -293,6 +287,7 @@ update_export_config() {
                 log "export config updated"
     fi
     }
+
 
 load_temple_config(){
         log "$(date +%F_%R) [New Install] Installing supporting template files."
@@ -333,6 +328,7 @@ install_syslog() {
         systemctl restart rsyslog
 	}
 
+
 change_auth_config() {
         log "change export auth file"
         sed -i "s/auth.php/global.php/" $path/graph_xport.php
@@ -342,13 +338,23 @@ change_auth_config() {
 	# sed -i "2 s/^/setlocale(LC_CTYPE,\"UTF8\",\"en_US.UTF-8\");\n/"  /var/www/html/lib/functions.php
         log "export auth file changed"
         }
+
+
 update_cron() {
-    log "Updating Cron jobs"
-    # Add Cron jobs
-    	sed -i 's#$path#'$path'#' /etc/cron.d/cacti
-	chmod 644 /etc/cron.d/cacti
-    log "Crontab updated."
+	log "Updating Cron jobs"
+	# Add Cron jobs
+	if [[ "$GRAPH_EXPORT" = "NO" | "$GRAPH_EXPORT" = "no" | "$GRAPH_EXPORT" = "0"  ]]; then
+		rm -rf /etc/cron.d/cacti_export
+	fi
+	if [[ "$DATA_BACKUP" = "NO" | "$DATA_BACKUP" = "no" | "$DATA_BACKUP" = "0"  ]]; then
+		rm -rf /etc/cron.d/cacti_backup
+	fi
+	sed -i 's#$path#'$path'#' /etc/cron.d/cacti
+	chmod 644 /etc/cron.d/*
+	log "Crontab updated."
         }
+
+
 set_timezone() {
     	if [[ $(grep "date.timezone = ${TIMEZONE}" /etc/php.ini) != "date.timezone = ${TIMEZONE}" ]]; then
                 log "Updating TIMEZONE"
@@ -357,13 +363,14 @@ set_timezone() {
     	fi
     	rm -rf /etc/localtime
     	ln -s  /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
-        sed -i 's/LANG="en_US.UTF-8"/LANG="zh_CN.UTF-8"/' /etc/sysconfig/i18n
-	source /etc/sysconfig/i18n
+        #sed -i 's/LANG="en_US.UTF-8"/LANG="zh_CN.UTF-8"/' /etc/sysconfig/i18n
+	#source /etc/sysconfig/i18n
 	}
+
+
 update_httpd() {
     log "Updating httpd config"
     sed -i 's#$path#'$path'#' /etc/httpd/conf.d/cacti.conf
-        
     log "httpd config updated."
         }
 
