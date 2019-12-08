@@ -1,6 +1,6 @@
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -21,7 +21,7 @@
  +-------------------------------------------------------------------------+
 */
 
-var timerID = null
+var timerID = null;
 var image   = ''
 var html    = ''
 var nextid  = -1
@@ -72,13 +72,20 @@ function formattime(secs) {
 }
 
 function startTime() {
-	timerID = setInterval('refreshTime()', 1000)
+	if (timerID == null)
+		timerID = setInterval(refreshTime, 1000)
+
 	$('#cstop').css('display', 'inline');
 	$('#cstart').css('display', 'none');
 }
 
 function stopTime() {
-	clearInterval(timerID)
+	if (timerID != null)
+	{
+		clearInterval(timerID);
+		timerID = null;
+	}
+
 	$('#cstop').css('display', 'none');
 	$('#cstart').css('display', 'inline');
 }
@@ -92,7 +99,12 @@ function resizeGraphs() {
 	$('.cycle_image').css('width', graph_width).css('height', graph_height).css('padding', '3px');
 }
 
-function loadGraphs(nextid) {
+function loadGraphs(id) {
+	var hadTimer = (timerID != null);
+	if (hadTimer) {
+		stopTime();
+	}
+
 	if ($('#tree_id').length) {
 		tree=$('#tree_id').val();
 	}else{
@@ -105,8 +117,8 @@ function loadGraphs(nextid) {
 		leaf='';
 	}
 
-	strURL = 'cycle.php?action=graphs' + 
-		'&id='       + nextid +
+	strURL = 'cycle.php?action=graphs' +
+		'&id='       + id +
 		'&rfilter='  + $('#rfilter').val() +
 		'&cols='     + $('#cols').val() +
 		'&timespan=' + $('#timespan').val() +
@@ -122,7 +134,7 @@ function loadGraphs(nextid) {
 		data = $.parseJSON(data);
 
 		if (data.image) {
-	       image = base64_decode(data.image);	
+			image = base64_decode(data.image);
 		}
 
 		if (data.graphid) {
@@ -130,16 +142,19 @@ function loadGraphs(nextid) {
 		}
 
 		if (data.nextgraphid) {
-			next = data.nextgraphid;
+			nextid = data.nextgraphid;
 		}
 
 		if (data.prevgraphid) {
-			prev = data.prevgraphid;
+			previd = data.prevgraphid;
 		}
 
 		$('#image').html(image);
 
 		resizeGraphs();
+		if (hadTimer) {
+			startTime();
+		}
 	});
 }
 
@@ -176,10 +191,14 @@ function saveFilter() {
 function refreshTime() {
 	ltime++
 	$('#countdown').html(formattime(time));
-	if (time == 0) {
-		time=rtime/1000+1;
-		loadGraphs(next);
+
+	if (time == 0)
+	{
+		stopTime();
+		getNext();
+		startTime();
 	}
+
 	time=time-1
 }
 
@@ -203,17 +222,18 @@ function newGraph() {
 function getNext() {
 	rtime=$('#delay').val() * 1000;
 	time=rtime/1000;
-	loadGraphs(next);
+	loadGraphs(nextid);
 }
 
 function getPrev() {
 	rtime=$('#delay').val() * 1000;
 	time=rtime/1000;
-	loadGraphs(prev);
+	loadGraphs(previd);
 }
 
 function clearFilter() {
 	strURL = 'cycle.php?action=view&clear=true&header=false';
+	stopTime();
 	loadPageNoHeader(strURL, function() {
 		loadGraphs(current);
 	});
@@ -246,6 +266,7 @@ function applyFilter() {
 		'&height='   + $('#height').val() +
 		'&delay='    + $('#delay').val();
 
+	stopTime();
 	loadPageNoHeader(strURL);
 }
 

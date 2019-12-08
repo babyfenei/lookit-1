@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2010-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -13,7 +13,7 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
- | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ | Cacti: The Complete RRDtool-based Graphing Solution                     |
  +-------------------------------------------------------------------------+
  | This code is designed, written, and maintained by the Cacti Group. See  |
  | about.php and/or the AUTHORS file for specific developer information.   |
@@ -21,6 +21,9 @@
  | http://www.cacti.net/                                                   |
  +-------------------------------------------------------------------------+
 */
+
+include_once(__DIR__ . '/includes/constants.php');
+include_once(__DIR__ . '/includes/arrays.php');
 
 function plugin_webseer_install () {
 	api_plugin_register_hook('webseer', 'draw_navigation_text', 'plugin_webseer_draw_navigation_text', 'setup.php');
@@ -36,7 +39,7 @@ function plugin_webseer_uninstall () {
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_servers');
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_servers_log');
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_urls');
-	db_execute('DROP TABLE IF EXISTS plugin_webseer_url_log');
+	db_execute('DROP TABLE IF EXISTS plugin_webseer_urls_log');
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_proxies');
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_processes');
 	db_execute('DROP TABLE IF EXISTS plugin_webseer_contacts');
@@ -72,42 +75,55 @@ function plugin_webseer_upgrade() {
 		}
 
 		if (version_compare($old, '2.0', '<')) {
-			db_execute_prepared('UPDATE plugin_config
-				SET version = ?
-				WHERE directory = "webseer"',
-				array($new));
+			db_execute("CREATE TABLE `plugin_webseer_proxies` (
+				`id` int(11) unsigned NOT NULL AUTO_INCREMENT	,
+				`name` varchar(30) DEFAULT '',
+				`hostname` varchar(64) DEFAULT '',
+				`http_port` mediumint(8) unsigned DEFAULT '80',
+				`https_port` mediumint(8) unsigned DEFAULT '443',
+				`username` varchar(40) DEFAULT '',
+				`password` varchar(60) DEFAULT '',
+				PRIMARY KEY (`id`),
+				KEY `hostname` (`hostname`),
+				KEY `name` (`name`))
+				ENGINE=InnoDB
+				COMMENT='Holds Proxy Information for Connections'");
 
-			db_execute_prepared("UPDATE plugin_config SET
-				version = ?, name = ?, author = ?, webpage = ?
-				WHERE directory = ?",
-				array(
-					$info['version'],
-					$info['longname'],
-					$info['author'],
-					$info['homepage'],
-					$info['name']
-				)
-			);
+			if (!db_column_exists('plugins_webseer_urls', 'proxy_server')) {
+				db_execute('ALTER TABLE plugin_webseer_urls
+					ADD COLUMN proxy_server int(11) unsigned NOT NULL default "0" AFTER requiresauth');
+			}
 		}
 
-		db_execute("CREATE TABLE `plugin_webseer_proxies` (
-			`id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-			`name` varchar(30) DEFAULT '',
-			`hostname` varchar(64) DEFAULT '',
-			`http_port` mediumint(8) unsigned DEFAULT '80',
-			`https_port` mediumint(8) unsigned DEFAULT '443',
-			`username` varchar(40) DEFAULT '',
-			`password` varchar(60) DEFAULT '',
-			PRIMARY KEY (`id`),
-			KEY `hostname` (`hostname`),
-			KEY `name` (`name`))
-			ENGINE=InnoDB
-			COMMENT='Holds Proxy Information for Connections'");
-
-		if (!db_column_exists('plugins_webseer_urls', 'proxy_server')) {
-			db_execute('ALTER TABLE plugin_webseer_urls
-				ADD COLUMN proxy_server int(11) unsigned NOT NULL default "0" AFTER requiresauth');
+		if (version_compare($old, '3.0', '<')) {
+			db_execute('RENAME TABLE `plugin_webseer_url_log` TO `plugin_webseer_urls_log`');
+			db_execute('ALTER TABLE `plugin_webseer_urls`
+				ADD COLUMN compression int(3) unsigned NOT NULL default "0" AFTER lastcheck,
+				ADD COLUMN notify_format int(3) unsigned NOT NULL default "0" AFTER notify_accounts');
+			db_execute('ALTER TABLE `plugin_webseer_urls_log`
+				ADD COLUMN compression int(3) unsigned NOT NULL default "0" AFTER lastcheck');
+			db_execute('ALTER TABLE `plugin_webseer_servers`
+				ADD COLUMN compression int(3) unsigned NOT NULL default "0" AFTER lastcheck');
+			db_execute('ALTER TABLE `plugin_webseer_servers_log`
+				ADD COLUMN compression int(3) unsigned NOT NULL default "0" AFTER lastcheck');
 		}
+
+		db_execute_prepared('UPDATE plugin_config
+			SET version = ?
+			WHERE directory = "webseer"',
+			array($new));
+
+		db_execute_prepared("UPDATE plugin_config SET
+			version = ?, name = ?, author = ?, webpage = ?
+			WHERE directory = ?",
+			array(
+				$info['version'],
+				$info['longname'],
+				$info['author'],
+				$info['homepage'],
+				$info['name']
+			)
+		);
 
 		db_execute_prepared('UPDATE plugin_realms
 			SET file = ?
@@ -132,6 +148,7 @@ function plugin_webseer_setup_table() {
 		`ip` varchar(120) NOT NULL,
 		`location` varchar(64) NOT NULL,
 		`lastcheck` timestamp NOT NULL default '0000-00-00',
+		`compression` int(3) NOT NULL default '0',
 		`isme` int(11) unsigned NOT NULL default '0',
 		`master` int(11) unsigned NOT NULL default '0',
 		`url` varchar(256) NOT NULL,
@@ -146,6 +163,7 @@ function plugin_webseer_setup_table() {
 		`server` int(11) unsigned NOT NULL default '0',
 		`url_id` int(11) unsigned NOT NULL default '0',
 		`lastcheck` timestamp NOT NULL default '0000-00-00',
+		`compression` int(3) unsigned NOT NULL default '0',
 		`result` int(11) unsigned NOT NULL default '0',
 		`http_code` int(11) unsigned default NULL,
 		`error` varchar(256) default NULL,
@@ -178,12 +196,14 @@ function plugin_webseer_setup_table() {
 		`checkcert` char(2) NOT NULL default 'on',
 		`notify_accounts` varchar(256) NOT NULL,
 		`notify_extra` varchar(256) NOT NULL,
+		`notify_format` int(3) unsigned NOT NULL default '0',
 		`result` int(11) unsigned NOT NULL default '0',
 		`downtrigger` int(11) unsigned NOT NULL default '3',
 		`timeout_trigger` int(11) unsigned NOT NULL default '4',
 		`failures` int(11) unsigned NOT NULL default '0',
 		`triggered` int(11) unsigned NOT NULL default '0',
 		`lastcheck` timestamp NOT NULL default '0000-00-00',
+		`compression` int(3) unsigned NOT NULL default '0',
 		`error` varchar(256) default NULL,
 		`http_code` int(11) unsigned default NULL,
 		`total_time` double default NULL,
@@ -202,10 +222,11 @@ function plugin_webseer_setup_table() {
 		ENGINE=InnoDB
 		COMMENT='Holds WebSeer Service Check Definitions'");
 
-	db_execute("CREATE TABLE IF NOT EXISTS `plugin_webseer_url_log` (
+	db_execute("CREATE TABLE IF NOT EXISTS `plugin_webseer_urls_log` (
 		`id` int(11) unsigned NOT NULL auto_increment,
 		`url_id` int(11) unsigned NOT NULL default '0',
 		`lastcheck` timestamp NOT NULL default '0000-00-00',
+		`compression` int(3) unsigned NOT NULL default '0',
 		`result` int(11) unsigned NOT NULL default '0',
 		`http_code` int(11) unsigned default NULL,
 		`error` varchar(256) default NULL,
@@ -278,54 +299,9 @@ function plugin_webseer_poller_bottom() {
 }
 
 function plugin_webseer_config_arrays() {
-	global $menu, $user_auth_realms, $user_auth_realm_filenames, $httperrors;
+	global $menu, $user_auth_realms, $user_auth_realm_filenames;
 
 	$menu[__('Management')]['plugins/webseer/webseer.php'] = __('Web Service Checks', 'webseer');
-
-	$httperrors = array(
-		  0 => 'Unable to Connect',
-		100 => 'Continue',
-		101 => 'Switching Protocols',
-		200 => 'OK',
-		201 => 'Created',
-		202 => 'Accepted',
-		203 => 'Non-Authoritative Information',
-		204 => 'No Content',
-		205 => 'Reset Content',
-		206 => 'Partial Content',
-		300 => 'Multiple Choices',
-		301 => 'Moved Permanently',
-		302 => 'Found',
-		303 => 'See Other',
-		304 => 'Not Modified',
-		305 => 'Use Proxy',
-		306 => '(Unused)',
-		307 => 'Temporary Redirect',
-		400 => 'Bad Request',
-		401 => 'Unauthorized',
-		402 => 'Payment Required',
-		403 => 'Forbidden',
-		404 => 'Not Found',
-		405 => 'Method Not Allowed',
-		406 => 'Not Acceptable',
-		407 => 'Proxy Authentication Required',
-		408 => 'Request Timeout',
-		409 => 'Conflict',
-		410 => 'Gone',
-		411 => 'Length Required',
-		412 => 'Precondition Failed',
-		413 => 'Request Entity Too Large',
-		414 => 'Request-URI Too Long',
-		415 => 'Unsupported Media Type',
-		416 => 'Requested Range Not Satisfiable',
-		417 => 'Expectation Failed',
-		500 => 'Internal Server Error',
-		501 => 'Not Implemented',
-		502 => 'Bad Gateway',
-		503 => 'Service Unavailable',
-		504 => 'Gateway Timeout',
-		505 => 'HTTP Version Not Supported'
-	);
 
 	$files = array('index.php', 'plugins.php', 'webseer.php');
 	if (in_array(get_current_page(), $files)) {

@@ -1,0 +1,304 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-03-19 09:50+0000\n"
+"PO-Revision-Date: 2019-07-21 20:50-0400\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: vi_VN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.3\n"
+
+#: audit.php:54 audit.php:77
+#, fuzzy
+msgid "Page:"
+msgstr "Trang"
+
+#: audit.php:55 audit.php:78
+msgid "User:"
+msgstr "Thành viên: "
+
+#: audit.php:56 audit.php:79
+#, fuzzy
+msgid "IP Address:"
+msgstr "Địa chỉ IP"
+
+#: audit.php:57 audit.php:80
+#, fuzzy
+msgid "Date:"
+msgstr "Ngày"
+
+#: audit.php:58 audit.php:81
+#, fuzzy
+msgid "Action:"
+msgstr "Hành động"
+
+#: audit.php:60
+#, fuzzy
+msgid "Script:"
+msgstr "Kịch bản"
+
+#: audit.php:87 audit.php:90
+#, fuzzy
+msgid "Attrib"
+msgstr "Attrib"
+
+#: audit.php:87 audit.php:90
+msgid "Value"
+msgstr "Giá trị"
+
+#: audit.php:130
+#, fuzzy, php-format
+msgid "Audit Log Purged by %s"
+msgstr "Nhật ký kiểm toán bị thanh trừng bởi %s"
+
+#: audit.php:165
+#, fuzzy
+msgctxt ""
+"Column Header used for CSV log export. Ensure that you do NOT(!) remove one "
+"of the commas. The output needs to be CSV compliant."
+msgid ""
+"page, user_id, username, action, ip_address, user_agent, event_time, post"
+msgstr ""
+"trang, user_id, tên người dùng, hành động, ip_address, user_agent, "
+"event_time, bài đăng"
+
+#: audit.php:253
+msgid "Audit Log"
+msgstr "Nhật ký"
+
+#: audit.php:262
+msgid "Search"
+msgstr "Tìm kiếm"
+
+#: audit.php:268
+msgid "Page"
+msgstr "Trang"
+
+#: audit.php:272 audit.php:288
+msgid "All"
+msgstr "Tất cả"
+
+#: audit.php:284
+msgid "User"
+msgstr "Người dùng"
+
+#: audit.php:289
+#, fuzzy
+msgid "cli"
+msgstr "cli"
+
+#: audit.php:301
+msgid "Events"
+msgstr "Sự kiện"
+
+#: audit.php:305
+msgid "Default"
+msgstr "Mặc định"
+
+#: audit.php:316
+msgid "Go"
+msgstr "Đi"
+
+#: audit.php:316
+#, fuzzy
+msgid "Set/Refresh Filters"
+msgstr "Đặt / Làm mới Bộ lọc"
+
+#: audit.php:319
+msgid "Clear"
+msgstr "Xóa"
+
+#: audit.php:319
+#, fuzzy
+msgid "Clear Filters"
+msgstr "Xóa bộ lọc"
+
+#: audit.php:322
+msgid "Export"
+msgstr "Xuất ra"
+
+#: audit.php:322
+#, fuzzy
+msgid "Export Log Events"
+msgstr "Xuất nhật ký sự kiện"
+
+#: audit.php:325
+msgid "Purge"
+msgstr "Gỡ"
+
+#: audit.php:325
+#, fuzzy
+msgid "Purge Log Events"
+msgstr "Thanh lọc sự kiện"
+
+#: audit.php:420
+#, fuzzy
+msgid "Audit Events"
+msgstr "Sự kiện kiểm toán"
+
+#: audit.php:428
+#, fuzzy
+msgid "Page Name"
+msgstr "Tên trang"
+
+#: audit.php:431
+#, fuzzy
+msgid "The page where the event was generated."
+msgstr "Trang nơi tạo ra sự kiện."
+
+#: audit.php:434
+msgid "User Name"
+msgstr "Tên người dùng"
+
+#: audit.php:437
+#, fuzzy
+msgid "The user who generated the event."
+msgstr "Người dùng đã tạo sự kiện."
+
+#: audit.php:440
+msgid "Action"
+msgstr "Hành động"
+
+#: audit.php:443
+#, fuzzy
+msgid "The Cacti Action requested.  Hover over action to see $_POST data."
+msgstr ""
+"Hành động Cacti được yêu cầu. Di chuột qua hành động để xem dữ liệu $ _POST."
+
+#: audit.php:446
+msgid "User Agent"
+msgstr "Tài khoản quản lí"
+
+#: audit.php:449
+#, fuzzy
+msgid "The browser type of the requester."
+msgstr "Các loại trình duyệt của người yêu cầu."
+
+#: audit.php:452
+msgid "IP Address"
+msgstr "Địa chỉ IP"
+
+#: audit.php:455
+#, fuzzy
+msgid "The IP Address of the requester."
+msgstr "Địa chỉ IP của người yêu cầu."
+
+#: audit.php:458
+msgid "Event Time"
+msgstr "Thời gian sự kiện"
+
+#: audit.php:461
+#, fuzzy
+msgid "The time the Event took place."
+msgstr "Thời gian sự kiện diễn ra."
+
+#: audit.php:475
+msgid "N/A"
+msgstr "N/A"
+
+#: audit.php:491
+#, fuzzy
+msgid "No Audit Log Events Found"
+msgstr "Không tìm thấy sự kiện Nhật ký kiểm toán"
+
+#: audit.php:511
+#, fuzzy
+msgid "Audit Event Details"
+msgstr "Chi tiết sự kiện kiểm toán"
+
+#: setup.php:33
+#, fuzzy
+msgid "View Cacti Audit Log"
+msgstr "Xem nhật ký kiểm toán Cacti"
+
+#: setup.php:244 setup.php:245
+msgid "Technical Support"
+msgstr "Hỗ trợ Kỹ thuật"
+
+#: setup.php:247
+#, fuzzy
+msgid "View Audit Log"
+msgstr "Xem nhật ký kiểm toán"
+
+#: setup.php:249
+#, fuzzy
+msgid ""
+"Allows Administrators to view change activity on the Cacti server.  "
+"Administrators can also export the audit log for analysis purposes."
+msgstr ""
+"Cho phép Quản trị viên xem hoạt động thay đổi trên máy chủ Cacti. Quản trị "
+"viên cũng có thể xuất nhật ký kiểm toán cho mục đích phân tích."
+
+#: setup.php:264
+#, fuzzy
+msgid "Indefinitely"
+msgstr "Vô thời hạn"
+
+#: setup.php:265
+#, fuzzy, php-format
+msgid "%d Weeks"
+msgstr "% d tuần"
+
+#: setup.php:266
+#, fuzzy, php-format
+msgid "%d Month"
+msgstr "% d tháng"
+
+#: setup.php:267 setup.php:268 setup.php:269 setup.php:270
+#, fuzzy, php-format
+msgid "%d Months"
+msgstr "% d tháng"
+
+#: setup.php:271
+#, fuzzy, php-format
+msgid "%d Year"
+msgstr "% d Năm"
+
+#: setup.php:272 setup.php:273
+#, fuzzy, php-format
+msgid "%d Years"
+msgstr "% d Năm"
+
+#: setup.php:284
+#, fuzzy
+msgid "Audit Log Settings"
+msgstr "Cài đặt nhật ký kiểm toán"
+
+#: setup.php:288
+#, fuzzy
+msgid "Enable Audit Log"
+msgstr "Bật nhật ký kiểm toán"
+
+#: setup.php:289
+#, fuzzy
+msgid "Check this box, if you want the Audit Log to track GUI activities."
+msgstr ""
+"Chọn hộp này, nếu bạn muốn Nhật ký kiểm toán theo dõi các hoạt động GUI."
+
+#: setup.php:294
+#, fuzzy
+msgid "Audit Log Retention"
+msgstr "Lưu giữ nhật ký kiểm toán"
+
+#: setup.php:295
+#, fuzzy
+msgid "How long do you wish Audit Log entries to be retained?"
+msgstr "Bạn muốn các mục Nhật ký kiểm toán được giữ lại trong bao lâu?"
+
+#: setup.php:302
+msgid "Misc"
+msgstr "Linh tinh"
+
+#: setup.php:313
+#, fuzzy
+msgid "Audit Event Log"
+msgstr "Nhật ký sự kiện kiểm toán"

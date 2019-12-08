@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -22,22 +22,12 @@
  +-------------------------------------------------------------------------+
 */
 
-$no_http_headers = true;
-
-/* do NOT run this script through a web browser */
-if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
-	die('<br><strong>This script is only meant to run at the command line.</strong>');
-}
-
 $dir = dirname(__FILE__);
 chdir($dir);
 
-if (substr_count(strtolower($dir), 'mactrack')) {
-	chdir('../../');
-}
-
-include('./include/global.php');
-include_once('./plugins/mactrack/lib/mactrack_functions.php');
+include('../../include/cli_check.php');
+include_once($config['base_path'] . '/plugins/mactrack/lib/mactrack_functions.php');
+include_once($config['base_path'] . '/plugins/mactrack/Net/DNS2.php');
 
 /* get the mactrack polling cycle */
 $max_run_duration = read_config_option('mt_collection_timing');
@@ -57,10 +47,10 @@ define('DEVICE_ROUTER', 3);
 $parms = $_SERVER['argv'];
 array_shift($parms);
 
-$debug   = FALSE;
+$debug   = false;
 $site_id = '';
 
-if (sizeof($parms)) {
+if (cacti_sizeof($parms)) {
 	foreach($parms as $parameter) {
 		if (strpos($parameter, '=')) {
 			list($arg, $value) = explode('=', $parameter);
@@ -75,7 +65,7 @@ if (sizeof($parms)) {
 				break;
 			case '-d':
 			case '--debug':
-				$debug = TRUE;
+				$debug = true;
 				break;
 			case '--version':
 			case '-V':
@@ -100,20 +90,32 @@ if (read_config_option('mt_reverse_dns') == 'on') {
 	$timeout        = read_config_option('mt_dns_timeout');
 	$dns_primary    = read_config_option('mt_dns_primary');
 	$dns_secondary  = read_config_option('mt_dns_secondary');
-	$primary_down   = FALSE;
-	$secondary_down = FALSE;
-}else{
+	$primary_down   = false;
+	$secondary_down = false;
+} else {
+	mactrack_debug('Exiting due to Reverse DNS being disabled');
 	exit;
 }
 
 /* place a process marker in the database for the ip resolver */
-db_process_add(0, TRUE);
+db_process_add(0, true);
 
 if ($site_id != '') {
-	$sql_where = 'AND site_id=$site_id';
-}else{
+	$sql_where = 'AND site_id=' . $site_id;
+} else {
 	$sql_where = '';
 }
+
+$nameservers = array();
+if ($dns_primary != '') {
+	$nameservers[] = $dns_primary;
+}
+
+if ($dns_secondary != '') {
+	$nameservers[] = $dns_secondary;
+}
+
+$resolver = new Net_DNS2_Resolver(array('nameservers' => $nameservers));
 
 /* loop until you are it */
 while (1) {
@@ -129,59 +131,41 @@ while (1) {
 		GROUP BY last_rundate
 		ORDER BY last_rundate DESC");
 
-	if ((sizeof($run_status) == 1) && ($processes_running == 0)) {
-		$break = TRUE;
-	}else{
-		$break = FALSE;
+	if ((cacti_sizeof($run_status) == 1) && ($processes_running == 0)) {
+		$break = true;
+	} else {
+		$break = false;
 	}
 
-	$unresolved_ips = db_fetch_assoc("SELECT * 
-		FROM mac_track_temp_ports 
-		WHERE ip_address != '' 
+	$unresolved_ips = db_fetch_assoc("SELECT *
+		FROM mac_track_temp_ports
+		WHERE ip_address != ''
 		AND (dns_hostname = '' OR dns_hostname IS NULL)");
 
-	if (sizeof($unresolved_ips) == 0) {
+	if (cacti_sizeof($unresolved_ips) == 0) {
 		mactrack_debug('No IP\'s require resolving this pass');
 		sleep(3);
-	}else{
-		mactrack_debug(sizeof($unresolved_ips) . ' IP\'s require resolving this pass');
+	} else {
+		mactrack_debug(cacti_sizeof($unresolved_ips) . ' IP\'s require resolving this pass');
 
 		foreach($unresolved_ips as $key => $unresolved_ip) {
 			$dns_hostname = $unresolved_ip['ip_address'];
-			$success = TRUE;
-			if (!$primary_down) {
-				$dns_hostname = mactrack_get_dns_from_ip($unresolved_ip['ip_address'], $dns_primary, $timeout);
-				if ($dns_hostname == 'timed_out') {
-					$dns_hostname == $unresolved_ip['ip_address'];
-					$primary_down = TRUE;
-					$success = FALSE;
-				}
-			}
 
-			if ((!$success) && (!$secondary_down)) {
-				$dns_hostname = mactrack_get_dns_from_ip($unresolved_ip['ip_address'], $dns_secondary, $timeout);
-				if ($dns_hostname == 'timed_out') {
-					$dns_hostname == $unresolved_ip['ip_address'];
-					$secondary_down = TRUE;
-					$success = FALSE;
-				}
-			}elseif (!$success) {
-				$dns_hostname == $unresolved_ip['ip_address'];
-			}
-
-			if (($primary_down) && ($secondary_down)) {
-				mactrack_debug('ERROR: Both Primary and Seconary DNS timed out, please increase timeout. Placing both DNS servers back online now.');
-				$secondary_down = FALSE;
-				$primary_down = FALSE;
+			try {
+				$resp = $resolver->query($dns_hostname, 'PTR');
+				$dns_hostname = $resp->answer[0]->ptrdname;
+			} catch(Net_DNS2_Exception $e) {
+				mactrack_debug('Unable to resolve IP Address: ' . $dns_hostname);
 			}
 
 			$unresolved_ips[$key]['dns_hostname'] = $dns_hostname;
 		}
+
 		mactrack_debug('DNS host association complete.');
 
 		/* output updated details to database */
 		foreach($unresolved_ips as $unresolved_ip) {
-			$insert_string = 'REPLACE INTO mac_track_temp_ports 
+			$insert_string = 'REPLACE INTO mac_track_temp_ports
 				(site_id,device_id,hostname,dns_hostname,device_name,vlan_id,vlan_name,
 				mac_address,vendor_mac,ip_address,port_number,port_name,scan_date)
 				VALUES (' .
@@ -213,10 +197,6 @@ exit;
 
 function display_version() {
 	global $config;
-
-	if (!function_exists('plugin_mactrack_version')) {
-		include_once($config['base_path'] . '/plugins/mactrack/setup.php');
-	}
 
 	$info = plugin_mactrack_version();
 	print "Network Device Tracking IP Resolver, Version " . $info['version'] . ", " . COPYRIGHT_YEARS . "\n";

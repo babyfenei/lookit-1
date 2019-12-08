@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -45,52 +45,32 @@ function plugin_mactrack_install() {
 	api_plugin_register_realm('mactrack', 'mactrack_view_ips.php,mactrack_view_arp.php,mactrack_view_macs.php,mactrack_view_dot1x.php,mactrack_view_sites.php,mactrack_view_devices.php,mactrack_view_interfaces.php,mactrack_view_graphs.php,mactrack_ajax.php', 'Device Tracking Viewer', 1);
 	api_plugin_register_realm('mactrack', 'mactrack_ajax_admin.php,mactrack_devices.php,mactrack_snmp.php,mactrack_sites.php,mactrack_device_types.php,mactrack_utilities.php,mactrack_macwatch.php,mactrack_macauth.php,mactrack_vendormacs.php', 'Device Tracking Administrator', 1);
 
-	mactrack_setup_table_new ();
+	mactrack_setup_table_new();
 }
 
-function plugin_mactrack_uninstall () {
-	db_execute('DROP TABLE IF EXISTS `mac_track_approved_macs`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_device_types`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_devices`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_interfaces`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_interface_graphs`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_ip_ranges`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_ips`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_dot1x`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_macauth`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_macwatch`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_oui_database`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_ports`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_processes`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_scan_dates`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_scanning_functions`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_sites`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_temp_ports`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_vlans`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_aggregated_ports`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_snmp`');
-	db_execute('DROP TABLE IF EXISTS `mac_track_snmp_items`');
+function plugin_mactrack_uninstall() {
+	return true;
 }
 
-function plugin_mactrack_version () {
+function plugin_mactrack_version() {
 	global $config;
 	$info = parse_ini_file($config['base_path'] . '/plugins/mactrack/INFO', true);
 	return $info['info'];
 }
 
-function plugin_mactrack_check_config () {
+function plugin_mactrack_check_config() {
 	/* Here we will check to ensure everything is configured */
 	mactrack_check_upgrade();
 	return true;
 }
 
-function plugin_mactrack_upgrade () {
+function plugin_mactrack_upgrade() {
 	/* Here we will upgrade to the newest version */
 	mactrack_check_upgrade();
 	return false;
 }
 
-function mactrack_check_upgrade () {
+function mactrack_check_upgrade() {
 	global $config;
 
 	$files = array('index.php', 'plugins.php', 'mactrack_devices.php');
@@ -98,8 +78,9 @@ function mactrack_check_upgrade () {
 		return;
 	}
 
+	include_once($config['base_path'] . '/plugins/mactrack/includes/database.php');
 	include_once($config['base_path'] . '/plugins/mactrack/lib/mactrack_functions.php');
-	
+
 	$current = plugin_mactrack_version();
 	$current = $current['version'];
 
@@ -124,8 +105,12 @@ function mactrack_check_upgrade () {
 
 		// If are realms are not present in plugin_realms recreate them with the old realm ids (minus 100) so that upgraded installs are not broken
 		if (!db_fetch_cell("SELECT id FROM plugin_realms WHERE plugin = 'mactrack'")) {
-			db_execute("INSERT INTO plugin_realms (id, plugin, file, display) VALUES (2020, 'mactrack', 'mactrack_view_ips.php,mactrack_view_arp.php,mactrack_view_macs.php,mactrack_view_sites.php,mactrack_view_devices.php,mactrack_view_interfaces.php,mactrack_view_dot1x.php,mactrack_view_graphs.php,mactrack_ajax.php', 'Device Tracking Viewer')");
-			db_execute("INSERT INTO plugin_realms (id, plugin, file, display) VALUES (2021, 'mactrack', 'mactrack_ajax_admin.php,mactrack_devices.php,mactrack_snmp.php,mactrack_sites.php,mactrack_device_types.php,mactrack_utilities.php,mactrack_macwatch.php,mactrack_macauth.php,mactrack_vendormacs.php', 'Device Tracking Administrator')");
+			db_execute("INSERT INTO plugin_realms
+				(id, plugin, file, display)
+				VALUES (2020, 'mactrack', 'mactrack_view_ips.php,mactrack_view_arp.php,mactrack_view_macs.php,mactrack_view_sites.php,mactrack_view_devices.php,mactrack_view_interfaces.php,mactrack_view_dot1x.php,mactrack_view_graphs.php,mactrack_ajax.php', 'Device Tracking Viewer')");
+			db_execute("INSERT INTO plugin_realms
+				(id, plugin, file, display)
+				VALUES (2021, 'mactrack', 'mactrack_ajax_admin.php,mactrack_devices.php,mactrack_snmp.php,mactrack_sites.php,mactrack_device_types.php,mactrack_utilities.php,mactrack_macwatch.php,mactrack_macauth.php,mactrack_vendormacs.php', 'Device Tracking Administrator')");
 		}
 
 		/* rebuild the scanning functions */
@@ -153,7 +138,7 @@ function mactrack_db_column_exists($table, $column) {
 
 	if (mactrack_db_table_exists($table)) {
 		$columns  = db_fetch_assoc("SHOW COLUMNS FROM $table");
-		if (sizeof($columns)) {
+		if (cacti_sizeof($columns)) {
 			foreach($columns as $row) {
 				if ($row['Field'] == $column) {
 					$found = true;
@@ -171,7 +156,7 @@ function mactrack_db_key_exists($table, $index) {
 
 	if (mactrack_db_table_exists($table)) {
 		$keys  = db_fetch_assoc("SHOW INDEXES FROM $table");
-		if (sizeof($keys)) {
+		if (cacti_sizeof($keys)) {
 			foreach($keys as $key) {
 				if ($key['Key_name'] == $index) {
 					$found = true;
@@ -218,704 +203,42 @@ function mactrack_delete_column($table, $column, $syntax) {
 	}
 }
 
-function mactrack_database_upgrade () {
-	mactrack_add_column('mac_track_interfaces', 'ifHighSpeed',           "ALTER TABLE `mac_track_interfaces` ADD COLUMN `ifHighSpeed` int(10) unsigned NOT NULL default '0' AFTER `ifSpeed`");
-	mactrack_add_column('mac_track_interfaces', 'ifDuplex',              "ALTER TABLE `mac_track_interfaces` ADD COLUMN `ifDuplex` int(10) unsigned NOT NULL default '0' AFTER `ifHighSpeed`");
-	mactrack_add_column('mac_track_interfaces', 'int_ifInDiscards',      "ALTER TABLE `mac_track_interfaces` ADD COLUMN `int_ifInDiscards` int(10) unsigned NOT NULL default '0' AFTER `ifOutErrors`");
-	mactrack_add_column('mac_track_interfaces', 'int_ifInErrors',        "ALTER TABLE `mac_track_interfaces` ADD COLUMN `int_ifInErrors` int(10) unsigned NOT NULL default '0' AFTER `int_ifInDiscards`");
-	mactrack_add_column('mac_track_interfaces', 'int_ifInUnknownProtos', "ALTER TABLE `mac_track_interfaces` ADD COLUMN `int_ifInUnknownProtos` int(10) unsigned NOT NULL default '0' AFTER `int_ifInErrors`");
-	mactrack_add_column('mac_track_interfaces', 'int_ifOutDiscards',     "ALTER TABLE `mac_track_interfaces` ADD COLUMN `int_ifOutDiscards` int(10) unsigned NOT NULL default '0' AFTER `int_ifInUnknownProtos`");
-	mactrack_add_column('mac_track_interfaces', 'int_ifOutErrors',       "ALTER TABLE `mac_track_interfaces` ADD COLUMN `int_ifOutErrors` int(10) unsigned NOT NULL default '0' AFTER `int_ifOutDiscards`");
-	mactrack_add_column('mac_track_devices',    'host_id',               "ALTER TABLE `mac_track_devices` ADD COLUMN `host_id` int(10) unsigned NOT NULL default '0' AFTER `device_id`");
-	mactrack_add_column('mac_track_macwatch',   'date_last_notif',       "ALTER TABLE `mac_track_macwatch` ADD COLUMN `date_last_notif` TIMESTAMP DEFAULT '0000-00-00 00:00:00' AFTER `date_last_seen`");
-	mactrack_execute_sql('Add length to Device Types Match Fields', "ALTER TABLE `mac_track_device_types` MODIFY COLUMN `sysDescr_match` VARCHAR(100) NOT NULL default '', MODIFY COLUMN `sysObjectID_match` VARCHAR(100) NOT NULL default ''");
-	mactrack_execute_sql('Correct a Scanning Function Bug', "DELETE FROM mac_track_scanning_functions WHERE scanning_function='Not Applicable - Hub/Switch'");
-	mactrack_add_column('mac_track_devices', 'host_id', "ALTER TABLE `mac_track_devices` ADD COLUMN `host_id` INTEGER UNSIGNED NOT NULL default '0' AFTER `device_id`");
-	mactrack_add_index('mac_track_devices', 'host_id', 'ALTER TABLE `mac_track_devices` ADD INDEX `host_id`(`host_id`)');
-	mactrack_add_index('mac_track_ports', 'scan_date', 'ALTER TABLE `mac_track_ports` ADD INDEX `scan_date` USING BTREE(`scan_date`)');
-
-	if (!mactrack_db_column_exists('mac_track_interfaces', 'sysUptime')) {
-		db_execute("ALTER TABLE mac_track_interfaces
-		ADD COLUMN `sysUptime` int(10) unsigned NOT NULL default '0' AFTER `device_id`,
-		ADD COLUMN `ifInOctets` int(10) unsigned NOT NULL default '0' AFTER `vlan_trunk_status`,
-		ADD COLUMN `ifOutOctets` int(10) unsigned NOT NULL default '0' AFTER `ifInOctets`,
-		ADD COLUMN `ifHCInOctets` bigint(20) unsigned NOT NULL default '0' AFTER `ifOutOctets`,
-		ADD COLUMN `ifHCOutOctets` bigint(20) unsigned NOT NULL default '0' AFTER `ifHCInOctets`,
-		ADD COLUMN `ifInUcastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifHCOutOctets`,
-		ADD COLUMN `ifOutUcastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifInUcastPkts`,
-		ADD COLUMN `ifInMulticastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifOutUcastPkts`,
-		ADD COLUMN `ifOutMulticastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifInMulticastPkts`,
-		ADD COLUMN `ifInBroadcastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifOutMulticastPkts`,
-		ADD COLUMN `ifOutBroadcastPkts` int(10) unsigned NOT NULL default '0' AFTER `ifInBroadcastPkts`,
-		ADD COLUMN `inBound` double NOT NULL default '0' AFTER `ifOutErrors`,
-		ADD COLUMN `outBound` double NOT NULL default '0' AFTER `inBound`,
-		ADD COLUMN `int_ifInOctets` int(10) unsigned NOT NULL default '0' AFTER `outBound`,
-		ADD COLUMN `int_ifOutOctets` int(10) unsigned NOT NULL default '0' AFTER `int_ifInOctets`,
-		ADD COLUMN `int_ifHCInOctets` bigint(20) unsigned NOT NULL default '0' AFTER `int_ifOutOctets`,
-		ADD COLUMN `int_ifHCOutOctets` bigint(20) unsigned NOT NULL default '0' AFTER `int_ifHCInOctets`,
-		ADD COLUMN `int_ifInUcastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifHCOutOctets`,
-		ADD COLUMN `int_ifOutUcastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifInUcastPkts`
-		ADD COLUMN `int_ifInMulticastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifOutUcastPkts`,
-		ADD COLUMN `int_ifOutMulticastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifInMulticastPkts`,
-		ADD COLUMN `int_ifInBroadcastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifOutMulticastPkts`,
-		ADD COLUMN `int_ifOutBroadcastPkts` int(10) unsigned NOT NULL default '0' AFTER `int_ifInBroadcastPkts`,");
-			
-	}
-
-	if (!mactrack_db_key_exists('mac_track_ports', 'site_id_device_id')) {
-		db_execute('ALTER TABLE `mac_track_ports` ADD INDEX `site_id_device_id`(`site_id`, `device_id`);');
-	}
-
-	# new for 2.1.2
-	# SNMP V3
-	mactrack_add_column('mac_track_devices',    'term_type',            "ALTER TABLE `mac_track_devices` ADD COLUMN `term_type` tinyint(11) NOT NULL default '1' AFTER `scan_type`");
-	mactrack_add_column('mac_track_devices',    'user_name',            "ALTER TABLE `mac_track_devices` ADD COLUMN `user_name` varchar(40) default NULL AFTER `term_type`");
-	mactrack_add_column('mac_track_devices',    'user_password',        "ALTER TABLE `mac_track_devices` ADD COLUMN `user_password` varchar(40) default NULL AFTER `user_name`");
-	mactrack_add_column('mac_track_devices',    'private_key_path',     "ALTER TABLE `mac_track_devices` ADD COLUMN `private_key_path` varchar(128) default '' AFTER `user_password`");
-	mactrack_add_column('mac_track_devices',    'snmp_options',         "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_options` int(10) unsigned NOT NULL default '0' AFTER `private_key_path`");
-	mactrack_add_column('mac_track_devices',    'snmp_username',        "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_username` varchar(50) default NULL AFTER `snmp_status`");
-	mactrack_add_column('mac_track_devices',    'snmp_password',        "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_password` varchar(50) default NULL AFTER `snmp_username`");
-	mactrack_add_column('mac_track_devices',    'snmp_auth_protocol',   "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_auth_protocol` char(5) default '' AFTER `snmp_password`");
-	mactrack_add_column('mac_track_devices',    'snmp_priv_passphrase', "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_priv_passphrase` varchar(200) default '' AFTER `snmp_auth_protocol`");
-	mactrack_add_column('mac_track_devices',    'snmp_priv_protocol',   "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_priv_protocol` char(6) default '' AFTER `snmp_priv_passphrase`");
-	mactrack_add_column('mac_track_devices',    'snmp_context',         "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_context` varchar(64) default '' AFTER `snmp_priv_protocol`");
-	mactrack_add_column('mac_track_devices',    'max_oids',             "ALTER TABLE `mac_track_devices` ADD COLUMN `max_oids` int(12) unsigned default '10' AFTER `snmp_context`");
-	mactrack_add_column('mac_track_devices',    'snmp_engine_id',       "ALTER TABLE `mac_track_devices` ADD COLUMN `snmp_engine_id` varchar(64) default '' AFTER `snmp_context`");
-
-	mactrack_add_column('mac_track_snmp_items', 'snmp_engine_id',       "ALTER TABLE `mac_track_snmp_items` ADD COLUMN `snmp_engine_id` varchar(64) default '' AFTER `snmp_context`");
-
-	if (!mactrack_db_table_exists('mac_track_snmp')) {
-		mactrack_create_table('mac_track_snmp', "CREATE TABLE `mac_track_snmp` (
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`name` varchar(100) NOT NULL default '',
-			PRIMARY KEY  (`id`))
-			ENGINE=InnoDB COMMENT='Group of SNMP Option Sets';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_snmp_items')) {
-		mactrack_create_table('mac_track_snmp_items', "CREATE TABLE `mac_track_snmp_items` (
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`snmp_id` int(10) unsigned NOT NULL default '0',
-			`sequence` int(10) unsigned NOT NULL default '0',
-			`snmp_version` varchar(100) NOT NULL default '',
-			`snmp_readstring` varchar(100) NOT NULL,
-			`snmp_port` int(10) NOT NULL default '161',
-			`snmp_timeout` int(10) unsigned NOT NULL default '500',
-			`snmp_retries` tinyint(11) unsigned NOT NULL default '3',
-			`max_oids` int(12) unsigned default '10',
-			`snmp_username` varchar(50) default NULL,
-			`snmp_password` varchar(50) default NULL,
-			`snmp_auth_protocol` char(5) default '',
-			`snmp_priv_passphrase` varchar(200) default '',
-			`snmp_priv_protocol` char(6) default '',
-			`snmp_context` varchar(64) default '',
-			`snmp_engine_id` varchar(64) default '',
-			PRIMARY KEY  (`id`,`snmp_id`))
-			ENGINE=InnoDB COMMENT='Set of SNMP Options';");
-	}
-
-	if (!sizeof(db_fetch_row("SHOW TABLES LIKE 'mac_track_interface_graphs'"))) {
-		db_execute("CREATE TABLE `mac_track_interface_graphs` (
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`ifIndex` int(10) unsigned NOT NULL,
-			`ifName` varchar(20) NOT NULL default '',
-			`host_id` int(11) NOT NULL default '0',
-			`local_graph_id` int(10) unsigned NOT NULL,
-			`snmp_query_id` int(11) NOT NULL default '0',
-			`graph_template_id` int(11) NOT NULL default '0',
-			`field_name` varchar(20) NOT NULL default '',
-			`field_value` varchar(25) NOT NULL default '',
-			`present` tinyint(4) default '1',
-			PRIMARY KEY  (`local_graph_id`,`device_id`,`ifIndex`, `host_id`),
-			KEY `host_id` (`host_id`),
-			KEY `device_id` (`device_id`)
-			) ENGINE=InnoDB;"
-		);
-	}
-
-	mactrack_add_column('mac_track_devices',
-		'term_type',
-		"ALTER TABLE `mac_track_devices` ADD COLUMN `term_type` tinyint(11) NOT NULL default '1' AFTER `scan_type`");
-	mactrack_add_column('mac_track_devices',
-		'private_key_path',
-		"ALTER TABLE `mac_track_devices` ADD COLUMN `private_key_path` varchar(128) default '' AFTER `user_password`");
-	mactrack_add_column('mac_track_interfaces',
-		'ifMauAutoNegAdminStatus',
-		"ALTER TABLE `mac_track_interfaces` ADD COLUMN `ifMauAutoNegAdminStatus` integer UNSIGNED NOT NULL default '0' AFTER `ifDuplex`");
-	mactrack_add_column('mac_track_interfaces',
-		'ifMauAutoNegRemoteSignaling',
-		"ALTER TABLE `mac_track_interfaces` ADD COLUMN `ifMauAutoNegRemoteSignaling` integer UNSIGNED NOT NULL default '0' AFTER `ifMauAutoNegAdminStatus`");
-	mactrack_add_column('mac_track_device_types',
-		'dot1x_scanning_function',
-		"ALTER TABLE `mac_track_device_types` ADD COLUMN `dot1x_scanning_function` varchar(100) default '' AFTER `ip_scanning_function`");
-	mactrack_add_column('mac_track_device_types',
-		'serial_number_oid',
-		"ALTER TABLE `mac_track_device_types` ADD COLUMN `serial_number_oid` varchar(100) default '' AFTER `dot1x_scanning_function`");
-	mactrack_add_column('mac_track_sites',
-		'customer_contact',
-		"ALTER TABLE `mac_track_sites` ADD COLUMN `customer_contact` varchar(150) default '' AFTER `site_name`");
-	mactrack_add_column('mac_track_sites',
-		'netops_contact',
-		"ALTER TABLE `mac_track_sites` ADD COLUMN `netops_contact` varchar(150) default '' AFTER `customer_contact`");
-	mactrack_add_column('mac_track_sites',
-		'facilities_contact',
-		"ALTER TABLE `mac_track_sites` ADD COLUMN `facilities_contact` varchar(150) default '' AFTER `netops_contact`");
-	mactrack_add_column('mac_track_sites',
-		'site_info',
-		"ALTER TABLE `mac_track_sites` ADD COLUMN `site_info` text AFTER `facilities_contact`");
-	mactrack_add_column('mac_track_devices',
-		'device_name',
-		"ALTER TABLE `mac_track_devices` ADD COLUMN `device_name` varchar(100) default '' AFTER `host_id`");
-	mactrack_add_column('mac_track_devices',
-		'notes',
-		"ALTER TABLE `mac_track_devices` ADD COLUMN `notes` text AFTER `hostname`");
-	mactrack_add_column('mac_track_scanning_functions',
-		'type',
-		"ALTER TABLE `mac_track_scanning_functions` ADD COLUMN `type` int(10) unsigned NOT NULL default '0' AFTER `scanning_function`");
-	mactrack_add_column('mac_track_temp_ports',
-		'device_name',
-		"ALTER TABLE `mac_track_temp_ports` ADD COLUMN `device_name` varchar(100) NOT NULL default '' AFTER `hostname`");
-	mactrack_add_column('mac_track_temp_ports',
-		'vendor_mac',
-		"ALTER TABLE `mac_track_temp_ports` ADD COLUMN `vendor_mac` varchar(8) default NULL AFTER `mac_address`");
-	mactrack_add_column('mac_track_temp_ports',
-		'authorized',
-		"ALTER TABLE `mac_track_temp_ports` ADD COLUMN `authorized` tinyint(3) unsigned NOT NULL default '0' AFTER `updated`");
-	mactrack_add_column('mac_track_ports',
-		'device_name',
-		"ALTER TABLE `mac_track_ports` ADD COLUMN `device_name` varchar(100) NOT NULL default '' AFTER `hostname`");
-	mactrack_add_column('mac_track_ports',
-		'vendor_mac',
-		"ALTER TABLE `mac_track_ports` ADD COLUMN `vendor_mac` varchar(8) default NULL AFTER `mac_address`");
-	mactrack_add_column('mac_track_ports',
-		'authorized',
-		"ALTER TABLE `mac_track_ports` ADD COLUMN `authorized` tinyint(3) unsigned NOT NULL default '0' AFTER `scan_date`");
-	mactrack_add_column('mac_track_ips',
-		'mac_track_ips',
-		"ALTER TABLE `mac_track_ips` ADD COLUMN `device_name` varchar(100) NOT NULL default '' AFTER `hostname`");
-
-	db_execute("ALTER TABLE mac_track_ips MODIFY COLUMN port_number varchar(20) NOT NULL default ''");
-	db_execute("ALTER TABLE mac_track_ports MODIFY COLUMN port_number varchar(20) NOT NULL default ''");
-	db_execute("ALTER TABLE mac_track_temp_ports MODIFY COLUMN port_number varchar(20) NOT NULL default ''");
-	db_execute("ALTER TABLE mac_track_aggregated_ports MODIFY COLUMN port_number varchar(20) NOT NULL default ''");
-}
-
 function mactrack_check_dependencies() {
 	global $plugins, $config;
 
 	return true;
 }
 
-function mactrack_setup_table_new () {
-	if (!mactrack_db_table_exists('mac_track_approved_macs')) {
-		db_execute("CREATE TABLE `mac_track_approved_macs` (
-			`mac_prefix` varchar(20) NOT NULL,
-			`vendor` varchar(50) NOT NULL,
-			`description` varchar(255) NOT NULL,
-			PRIMARY KEY  (`mac_prefix`)) ENGINE=InnoDB;");
-	}
+function mactrack_setup_table_new() {
+	global $config;
 
-	if (!mactrack_db_table_exists('mac_track_device_types')) {
-		db_execute("CREATE TABLE `mac_track_device_types` (
-			`device_type_id` int(10) unsigned NOT NULL auto_increment,
-			`description` varchar(100) NOT NULL default '',
-			`vendor` varchar(40) NOT NULL default '',
-			`device_type` varchar(10) NOT NULL default '0',
-			`sysDescr_match` varchar(20) NOT NULL default '',
-			`sysObjectID_match` varchar(40) NOT NULL default '',
-			`scanning_function` varchar(100) NOT NULL default '',
-			`ip_scanning_function` varchar(100) NOT NULL,
-			`dot1x_scanning_function` varchar(100) NOT NULL,
-			`serial_number_oid` varchar(100) default '',
-			`lowPort` int(10) unsigned NOT NULL default '0',
-			`highPort` int(10) unsigned NOT NULL default '0',
-			PRIMARY KEY  (`sysDescr_match`,`sysObjectID_match`,`device_type`),
-			KEY `device_type` (`device_type`),
-			KEY `device_type_id` (`device_type_id`))
-			ENGINE=InnoDB;");
-	}
+	include_once($config['base_path'] . '/plugins/mactrack/includes/database.php');
 
-	if (!mactrack_db_table_exists('mac_track_devices')) {
-		db_execute("CREATE TABLE `mac_track_devices` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL auto_increment,
-			`host_id` INTEGER UNSIGNED NOT NULL default '0',
-			`device_name` varchar(100) default '',
-			`device_type_id` int(10) unsigned default '0',
-			`hostname` varchar(40) NOT NULL default '',
-			`notes` text,
-			`disabled` char(2) default '',
-			`ignorePorts` varchar(255) default NULL,
-			`ips_total` int(10) unsigned NOT NULL default '0',
-			`vlans_total` int(10) unsigned NOT NULL default '0',
-			`ports_total` int(10) unsigned NOT NULL default '0',
-			`ports_active` int(10) unsigned NOT NULL default '0',
-			`ports_trunk` int(10) unsigned NOT NULL default '0',
-			`macs_active` int(10) unsigned NOT NULL default '0',
-			`scan_type` tinyint(11) NOT NULL default '1',
-			`term_type` tinyint(11) NOT NULL default '1',
-			`user_name` varchar(40) default NULL,
-			`user_password` varchar(40) default NULL,
-			`private_key_path` varchar(128) default '',
-			`snmp_options` int(10) unsigned NOT NULL default '0',
-			`snmp_readstring` varchar(100) NOT NULL,
-			`snmp_readstrings` varchar(255) default NULL,
-			`snmp_version` varchar(100) NOT NULL default '',
-			`snmp_port` int(10) NOT NULL default '161',
-			`snmp_timeout` int(10) unsigned NOT NULL default '500',
-			`snmp_retries` tinyint(11) unsigned NOT NULL default '3',
-			`snmp_sysName` varchar(100) default '',
-			`snmp_sysLocation` varchar(100) default '',
-			`snmp_sysContact` varchar(100) default '',
-			`snmp_sysObjectID` varchar(100) default NULL,
-			`snmp_sysDescr` varchar(100) default NULL,
-			`snmp_sysUptime` varchar(100) default NULL,
-			`snmp_status` int(10) unsigned NOT NULL default '0',
-			`snmp_username` varchar(50) default NULL,
-			`snmp_password` varchar(50) default NULL,
-			`snmp_auth_protocol` char(5) default '',
-			`snmp_priv_passphrase` varchar(200) default '',
-			`snmp_priv_protocol` char(6) default '',
-			`snmp_context` varchar(64) default '',
-			`snmp_engine_id` varchar(64) default '',
-			`max_oids` int(12) unsigned default '10',
-			`last_runmessage` varchar(100) default '',
-			`last_rundate` datetime NOT NULL default '0000-00-00 00:00:00',
-			`last_runduration` decimal(10,5) NOT NULL default '0.00000',
-			PRIMARY KEY  (`hostname`,`snmp_port`,`site_id`),
-			KEY `site_id` (`site_id`),
-			KEY `host_id`(`host_id`),
-			KEY `device_id` (`device_id`),
-			KEY `snmp_sysDescr` (`snmp_sysDescr`),
-			KEY `snmp_sysObjectID` (`snmp_sysObjectID`),
-			KEY `device_type_id` (`device_type_id`),
-			KEY `device_name` (`device_name`))
-			ENGINE=InnoDB COMMENT='Devices to be scanned for MAC addresses';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_interfaces')) {
-		db_execute("CREATE TABLE `mac_track_interfaces` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`sysUptime` int(10) unsigned NOT NULL default '0',
-			`ifIndex` int(10) unsigned NOT NULL default '0',
-			`ifName` varchar(128) NOT NULL,
-			`ifAlias` varchar(255) NOT NULL,
-			`ifDescr` varchar(128) NOT NULL,
-			`ifType` int(10) unsigned NOT NULL default '0',
-			`ifMtu` int(10) unsigned NOT NULL default '0',
-			`ifSpeed` int(10) unsigned NOT NULL default '0',
-			`ifHighSpeed` int(10) unsigned NOT NULL default '0',
-			`ifDuplex` int(10) unsigned NOT NULL default '0',
-			`ifMauAutoNegAdminStatus` integer UNSIGNED NOT NULL default '0',
-			`ifMauAutoNegRemoteSignaling` integer UNSIGNED NOT NULL default '0',
-			`ifPhysAddress` varchar(20) NOT NULL,
-			`ifAdminStatus` int(10) unsigned NOT NULL default '0',
-			`ifOperStatus` int(10) unsigned NOT NULL default '0',
-			`ifLastChange` int(10) unsigned NOT NULL default '0',
-			`linkPort` tinyint(3) unsigned NOT NULL default '0',
-			`vlan_id` int(10) unsigned NOT NULL,
-			`vlan_name` varchar(128) NOT NULL,
-			`vlan_trunk` tinyint(3) unsigned NOT NULL,
-			`vlan_trunk_status` int(10) unsigned NOT NULL,
-			`ifInOctets` int(10) unsigned NOT NULL default '0',
-			`ifOutOctets` int(10) unsigned NOT NULL default '0',
-			`ifHCInOctets` bigint(20) unsigned NOT NULL default '0',
-			`ifHCOutOctets` bigint(20) unsigned NOT NULL default '0',
-			`ifInMulticastPkts` int(10) unsigned NOT NULL default '0',
-                        `ifOutMulticastPkts` int(10) unsigned NOT NULL default '0',
-			`ifInBroadcastPkts` int(10) unsigned NOT NULL default '0',
-			`ifOutBroadcastPkts` int(10) unsigned NOT NULL default '0',
-			`ifInUcastPkts` int(10) unsigned NOT NULL default '0',
-			`ifOutUcastPkts` int(10) unsigned NOT NULL default '0',
-			`ifInDiscards` int(10) unsigned NOT NULL default '0',
-			`ifInErrors` int(10) unsigned NOT NULL default '0',
-			`ifInUnknownProtos` int(10) unsigned NOT NULL default '0',
-			`ifOutDiscards` int(10) unsigned default '0',
-			`ifOutErrors` int(10) unsigned default '0',
-			`inBound` double NOT NULL default '0',
-			`outBound` double NOT NULL default '0',
-			`int_ifInOctets` int(10) unsigned NOT NULL default '0',
-			`int_ifOutOctets` int(10) unsigned NOT NULL default '0',
-			`int_ifHCInOctets` bigint(20) unsigned NOT NULL default '0',
-			`int_ifHCOutOctets` bigint(20) unsigned NOT NULL default '0',
-			`int_ifInNUcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifOutNUcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifInMulticastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifOutMulticastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifInBroadcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifOutBroadcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifInUcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifOutUcastPkts` int(10) unsigned NOT NULL default '0',
-			`int_ifInDiscards` float unsigned NOT NULL default '0',
-			`int_ifInErrors` float unsigned NOT NULL default '0',
-			`int_ifInUnknownProtos` float unsigned NOT NULL default '0',
-			`int_ifOutDiscards` float unsigned NOT NULL default '0',
-			`int_ifOutErrors` float unsigned NOT NULL default '0',
-			`last_up_time` timestamp NOT NULL default '0000-00-00 00:00:00',
-			`last_down_time` timestamp NOT NULL default '0000-00-00 00:00:00',
-			`stateChanges` int(10) unsigned NOT NULL default '0',
-			`int_discards_present` tinyint(3) unsigned NOT NULL default '0',
-			`int_errors_present` tinyint(3) unsigned NOT NULL default '0',
-			`present` tinyint(3) unsigned NOT NULL default '0',
-			PRIMARY KEY  (`site_id`,`device_id`,`ifIndex`),
-			KEY `ifDescr` (`ifDescr`),
-			KEY `ifType` (`ifType`),
-			KEY `ifSpeed` (`ifSpeed`),
-			KEY `ifMTU` (`ifMtu`),
-			KEY `ifAdminStatus` (`ifAdminStatus`),
-			KEY `ifOperStatus` (`ifOperStatus`),
-			KEY `ifInDiscards` USING BTREE (`ifInUnknownProtos`),
-			KEY `ifInErrors` USING BTREE (`ifInUnknownProtos`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_ip_ranges')) {
-		db_execute("CREATE TABLE `mac_track_ip_ranges` (
-			`ip_range` varchar(20) NOT NULL default '',
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`ips_max` int(10) unsigned NOT NULL default '0',
-			`ips_current` int(10) unsigned NOT NULL default '0',
-			`ips_max_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			`ips_current_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`ip_range`,`site_id`),
-			KEY `site_id` (`site_id`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_ips')) {
-		db_execute("CREATE TABLE `mac_track_ips` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`hostname` varchar(40) NOT NULL default '',
-			`device_name` varchar(100) NOT NULL default '',
-			`port_number` varchar(20) NOT NULL default '',
-			`mac_address` varchar(20) NOT NULL default '',
-			`ip_address` varchar(20) NOT NULL default '',
-			`dns_hostname` varchar(200) default '',
-			`scan_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`scan_date`,`ip_address`,`mac_address`,`site_id`),
-			KEY `ip` (`ip_address`),
-			KEY `port_number` (`port_number`),
-			KEY `mac` (`mac_address`),
-			KEY `device_id` (`device_id`),
-			KEY `site_id` (`site_id`),
-			KEY `hostname` (`hostname`),
-			KEY `scan_date` (`scan_date`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_dot1x')) {
-		db_execute("CREATE TABLE `mac_track_dot1x` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`hostname` varchar(40) NOT NULL default '',
-			`device_name` varchar(100) NOT NULL default '',
-			`username` varchar(100) NOT NULL default '',
-			`domain` int(10) unsigned NOT NULL default '0',
-			`status` int(10) unsigned NOT NULL default '0',
-			`port_number` varchar(20) NOT NULL default '',
-			`mac_address` varchar(20) NOT NULL default '',
-			`ip_address` varchar(20) NOT NULL default '',
-			`dns_hostname` varchar(200) default '',
-			`scan_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`scan_date`,`ip_address`,`mac_address`,`site_id`),
-			KEY `ip` (`ip_address`),
-			KEY `port_number` (`port_number`),
-			KEY `mac` (`mac_address`),
-			KEY `device_id` (`device_id`),
-			KEY `site_id` (`site_id`),
-			KEY `username` (`username`),
-			KEY `hostname` (`hostname`),
-			KEY `scan_date` (`scan_date`))
-			ENGINE=InnoDB;");
-	}
-	
-	if (!mactrack_db_table_exists('mac_track_macauth')) {
-		db_execute("CREATE TABLE `mac_track_macauth` (
-			`mac_address` varchar(20) NOT NULL,
-			`mac_id` int(10) unsigned NOT NULL auto_increment,
-			`description` varchar(100) NOT NULL,
-			`added_date` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
-			`added_by` varchar(20) NOT NULL,
-			PRIMARY KEY  (`mac_address`),
-			KEY `mac_id` (`mac_id`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_macwatch')) {
-		db_execute("CREATE TABLE `mac_track_macwatch` (
-			`mac_address` varchar(20) NOT NULL,
-			`mac_id` int(10) unsigned NOT NULL auto_increment,
-			`name` varchar(45) NOT NULL,
-			`description` varchar(255) NOT NULL,
-			`ticket_number` varchar(45) NOT NULL,
-			`notify_schedule` tinyint(3) unsigned NOT NULL,
-			`email_addresses` varchar(255) NOT NULL default '',
-			`discovered` tinyint(3) unsigned NOT NULL,
-			`date_first_seen` timestamp NOT NULL default '0000-00-00 00:00:00',
-			`date_last_seen` timestamp NOT NULL default '0000-00-00 00:00:00',
-			`date_last_notif` timestamp NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`mac_address`),
-			KEY `mac_id` (`mac_id`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_oui_database')) {
-		db_execute("CREATE TABLE `mac_track_oui_database` (
-			`vendor_mac` varchar(8) NOT NULL,
-			`vendor_name` varchar(100) NOT NULL,
-			`vendor_address` text NOT NULL,
-			`present` tinyint(3) unsigned NOT NULL default '1',
-			PRIMARY KEY  (`vendor_mac`),
-			KEY `vendor_name` (`vendor_name`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_ports')) {
-		db_execute("CREATE TABLE `mac_track_ports` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`hostname` varchar(40) NOT NULL default '',
-			`device_name` varchar(100) NOT NULL default '',
-			`vlan_id` varchar(5) NOT NULL default 'N/A',
-			`vlan_name` varchar(50) NOT NULL default '',
-			`mac_address` varchar(20) NOT NULL default '',
-			`vendor_mac` varchar(8) default NULL,
-			`ip_address` varchar(20) NOT NULL default '',
-			`dns_hostname` varchar(200) default '',
-			`port_number` varchar(20) NOT NULL default '',
-			`port_name` varchar(50) NOT NULL default '',
-			`scan_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			`authorized` tinyint(3) unsigned NOT NULL default '0',
-			PRIMARY KEY  (`port_number`,`scan_date`,`mac_address`,`device_id`),
-			KEY `site_id` (`site_id`),
-			KEY `scan_date` USING BTREE(`scan_date`),
-			KEY `description` (`device_name`),
-			KEY `mac` (`mac_address`),
-			KEY `hostname` (`hostname`),
-			KEY `vlan_name` (`vlan_name`),
-			KEY `vlan_id` (`vlan_id`),
-			KEY `device_id` (`device_id`),
-			KEY `ip_address` (`ip_address`),
-			KEY `port_name` (`port_name`),
-			KEY `dns_hostname` (`dns_hostname`),
-			KEY `vendor_mac` (`vendor_mac`),
-			KEY `authorized` (`authorized`))
-			ENGINE=InnoDB COMMENT='Database for Tracking Device MACs'");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_processes')) {
-		db_execute("CREATE TABLE `mac_track_processes` (
-			`device_id` int(11) NOT NULL default '0',
-			`process_id` int(10) unsigned default NULL,
-			`status` varchar(20) NOT NULL default 'Queued',
-			`start_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`device_id`))
-			ENGINE=InnoDB");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_scan_dates')) {
-		db_execute("CREATE TABLE `mac_track_scan_dates` (
-			`scan_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`scan_date`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_scanning_functions')) {
-		db_execute("CREATE TABLE `mac_track_scanning_functions` (
-			`scanning_function` varchar(100) NOT NULL default '',
-			`type` int(10) unsigned NOT NULL default '0',
-			`description` varchar(200) NOT NULL default '',
-			PRIMARY KEY  (`scanning_function`))
-			ENGINE=InnoDB
-			COMMENT='Registered Scanning Functions';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_sites')) {
-		db_execute("CREATE TABLE `mac_track_sites` (
-			`site_id` int(10) unsigned NOT NULL auto_increment,
-			`site_name` varchar(100) NOT NULL default '',
-			`customer_contact` varchar(150) default '',
-			`netops_contact` varchar(150) default '',
-			`facilities_contact` varchar(150) default '',
-			`site_info` text,
-			`total_devices` int(10) unsigned NOT NULL default '0',
-			`total_device_errors` int(10) unsigned NOT NULL default '0',
-			`total_macs` int(10) unsigned NOT NULL default '0',
-			`total_ips` int(10) unsigned NOT NULL default '0',
-			`total_user_ports` int(11) NOT NULL default '0',
-			`total_oper_ports` int(10) unsigned NOT NULL default '0',
-			`total_trunk_ports` int(10) unsigned NOT NULL default '0',
-			PRIMARY KEY  (`site_id`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_temp_ports')) {
-		db_execute("CREATE TABLE `mac_track_temp_ports` (
-			`site_id` int(10) unsigned NOT NULL default '0',
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`hostname` varchar(40) NOT NULL default '',
-			`device_name` varchar(100) NOT NULL default '',
-			`vlan_id` varchar(5) NOT NULL default 'N/A',
-			`vlan_name` varchar(50) NOT NULL default '',
-			`mac_address` varchar(20) NOT NULL default '',
-			`vendor_mac` varchar(8) default NULL,
-			`ip_address` varchar(20) NOT NULL default '',
-			`dns_hostname` varchar(200) default '',
-			`port_number` varchar(20) NOT NULL default '',
-			`port_name` varchar(50) NOT NULL default '',
-			`scan_date` datetime NOT NULL default '0000-00-00 00:00:00',
-			`updated` tinyint(3) unsigned NOT NULL default '0',
-			`authorized` tinyint(3) unsigned NOT NULL default '0',
-			PRIMARY KEY  (`port_number`,`scan_date`,`mac_address`,`device_id`),
-			KEY `site_id` (`site_id`),
-			KEY `device_name` (`device_name`),
-			KEY `ip_address` (`ip_address`),
-			KEY `hostname` (`hostname`),
-			KEY `vlan_name` (`vlan_name`),
-			KEY `vlan_id` (`vlan_id`),
-			KEY `device_id` (`device_id`),
-			KEY `mac` (`mac_address`),
-			KEY `updated` (`updated`),
-			KEY `vendor_mac` (`vendor_mac`),
-			KEY `authorized` (`authorized`))
-			ENGINE=InnoDB
-			COMMENT='Database for Storing Temporary Results for Tracking Device MACS';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_vlans')) {
-		db_execute("CREATE TABLE `mac_track_vlans` (
-			`vlan_id` int(10) unsigned NOT NULL,
-			`site_id` int(10) unsigned NOT NULL,
-			`device_id` int(10) unsigned NOT NULL,
-			`vlan_name` varchar(128) NOT NULL,
-			`present` tinyint(3) unsigned NOT NULL default '1',
-			PRIMARY KEY  (`vlan_id`,`site_id`,`device_id`),
-			KEY `vlan_name` (`vlan_name`))
-			ENGINE=InnoDB;");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_aggregated_ports')) {
-		db_execute("CREATE TABLE `mac_track_aggregated_ports` (
-			`row_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-			`site_id` int(10) unsigned NOT NULL DEFAULT '0',
-			`device_id` int(10) unsigned NOT NULL DEFAULT '0',
-			`hostname` varchar(40) NOT NULL DEFAULT '',
-			`device_name` varchar(100) NOT NULL DEFAULT '',
-			`vlan_id` varchar(5) NOT NULL DEFAULT 'N/A',
-			`vlan_name` varchar(50) NOT NULL DEFAULT '',
-			`mac_address` varchar(20) NOT NULL DEFAULT '',
-			`vendor_mac` varchar(8) DEFAULT NULL,
-			`ip_address` varchar(20) NOT NULL DEFAULT '',
-			`dns_hostname` varchar(200) DEFAULT '',
-			`port_number` varchar(20) NOT NULL DEFAULT '',
-			`port_name` varchar(50) NOT NULL DEFAULT '',
-			`date_last` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			`first_scan_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-			`count_rec` int(10) unsigned NOT NULL DEFAULT '0',
-			`active_last` tinyint(1) unsigned NOT NULL DEFAULT '0',
-			`authorized` tinyint(3) unsigned NOT NULL DEFAULT '0',
-			PRIMARY KEY (`row_id`),
-			UNIQUE KEY `port_number` USING BTREE (`port_number`,`mac_address`,`ip_address`,`device_id`,`site_id`,`vlan_id`,`authorized`),
-			KEY `site_id` (`site_id`),
-			KEY `device_name` (`device_name`),
-			KEY `mac` (`mac_address`),
-			KEY `hostname` (`hostname`),
-			KEY `vlan_name` (`vlan_name`),
-			KEY `vlan_id` (`vlan_id`),
-			KEY `device_id` (`device_id`),
-			KEY `ip_address` (`ip_address`),
-			KEY `port_name` (`port_name`),
-			KEY `dns_hostname` (`dns_hostname`),
-			KEY `vendor_mac` (`vendor_mac`),
-			KEY `authorized` (`authorized`),
-			KEY `site_id_device_id` (`site_id`,`device_id`)
-			) ENGINE=InnoDB COMMENT='Database for aggregated date for Tracking Device MAC''s';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_snmp')) {
-		db_execute("CREATE TABLE `mac_track_snmp` (
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`name` varchar(100) NOT NULL default '',
-			PRIMARY KEY  (`id`))
-			ENGINE=InnoDB COMMENT='Group of SNMP Option Sets';");
-	}
-
-	if (!mactrack_db_table_exists('mac_track_snmp_items')) {
-		db_execute("CREATE TABLE `mac_track_snmp_items` (
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`snmp_id` int(10) unsigned NOT NULL default '0',
-			`sequence` int(10) unsigned NOT NULL default '0',
-			`snmp_version` varchar(100) NOT NULL default '',
-			`snmp_readstring` varchar(100) NOT NULL,
-			`snmp_port` int(10) NOT NULL default '161',
-			`snmp_timeout` int(10) unsigned NOT NULL default '500',
-			`snmp_retries` tinyint(11) unsigned NOT NULL default '3',
-			`max_oids` int(12) unsigned default '10',
-			`snmp_username` varchar(50) default NULL,
-			`snmp_password` varchar(50) default NULL,
-			`snmp_auth_protocol` char(5) default '',
-			`snmp_priv_passphrase` varchar(200) default '',
-			`snmp_priv_protocol` char(6) default '',
-			`snmp_context` varchar(64) default '',
-			`snmp_engine_id` varchar(64) default '',
-			PRIMARY KEY  (`id`,`snmp_id`))
-			ENGINE=InnoDB COMMENT='Set of SNMP Options';");
-	}
-
-	if (!sizeof(db_fetch_row("SHOW TABLES LIKE 'mac_track_interface_graphs'"))) {
-		db_execute("CREATE TABLE `mac_track_interface_graphs` (
-			`device_id` int(10) unsigned NOT NULL default '0',
-			`ifIndex` int(10) unsigned NOT NULL,
-			`ifName` varchar(20) NOT NULL default '',
-			`host_id` int(11) NOT NULL default '0',
-			`local_graph_id` int(10) unsigned NOT NULL,
-			`snmp_query_id` int(11) NOT NULL default '0',
-			`graph_template_id` int(11) NOT NULL default '0',
-			`field_name` varchar(20) NOT NULL default '',
-			`field_value` varchar(25) NOT NULL default '',
-			`present` tinyint(4) default '1',
-			PRIMARY KEY  (`local_graph_id`,`device_id`,`ifIndex`, `host_id`),
-			KEY `host_id` (`host_id`),
-			KEY `device_id` (`device_id`)
-			) ENGINE=InnoDB;"
-		);
-	}
+	mactrack_setup_database();
 }
 
 function mactrack_page_head() {
 	global $config;
 
-	if (substr_count(get_current_page(), 'mactrack_')) {
-		if (!isset($config['base_path'])) {
-			print "<script type='text/javascript' src='" . URL_PATH . "plugins/mactrack/mactrack.js'></script>\n";
-		}else{
-			if (file_exists($config['base_path'] . '/plugins/mactrack/themes/' . get_selected_theme() . '/mactrack.css')) {
-				print "<link type='text/css' href='" . $config['url_path'] . "plugins/mactrack/themes/" . get_selected_theme() . "/mactrack.css' rel='stylesheet'>\n";
-			}else{
-				print "<link type='text/css' href='" . $config['url_path'] . "plugins/mactrack/mactrack.css' rel='stylesheet'>\n";
-			}
-		}
-		print "<script type='text/javascript' src='" . $config['url_path'] . "plugins/mactrack/mactrack.js'></script>\n";
-		print "<script type='text/javascript' src='" . $config['url_path'] . "plugins/mactrack/mactrack_snmp.js'></script>\n";
+	print "<script type='text/javascript' src='" . $config['url_path'] . "plugins/mactrack/mactrack.js'></script>\n";
+	print "<script type='text/javascript' src='" . $config['url_path'] . "plugins/mactrack/mactrack_snmp.js'></script>\n";
+	if (file_exists($config['base_path'] . '/plugins/mactrack/themes/' . get_selected_theme() . '/mactrack.css')) {
+		print "<link type='text/css' href='" . $config['url_path'] . "plugins/mactrack/themes/" . get_selected_theme() . "/mactrack.css' rel='stylesheet'>\n";
+	} else {
+		print "<link type='text/css' href='" . $config['url_path'] . "plugins/mactrack/mactrack.css' rel='stylesheet'>\n";
 	}
 }
 
-function mactrack_poller_bottom () {
+function mactrack_poller_bottom() {
 	global $config;
-
-	include_once($config['base_path'] . '/lib/poller.php');
-	include_once($config['base_path'] . '/lib/data_query.php');
-	include_once($config['base_path'] . '/lib/rrd.php');
 
 	$command_string = read_config_option('path_php_binary');
 	$extra_args = '-q ' . $config['base_path'] . '/plugins/mactrack/poller_mactrack.php';
 	exec_background($command_string, $extra_args);
 }
 
-function mactrack_config_settings () {
-	global $tabs, $settings, $snmp_versions, $mactrack_poller_frequencies,
+function mactrack_config_settings() {
+	global $tabs, $settings, $settings_user, $tabs_graphs, $snmp_versions, $mactrack_poller_frequencies,
 	$mactrack_data_retention, $mactrack_macauth_frequencies, $mactrack_update_policies;
 
 	$tabs['mactrack'] = __('Device Tracking', 'mactrack');
@@ -964,6 +287,12 @@ function mactrack_config_settings () {
 			'max_length' => '10',
 			'size' => '8'
 			),
+		'mt_maint_confirm' => array(
+			'friendly_name' => __('Confirm Utilities Prompt', 'mactrack'),
+			'description' => __('When using utilities, prompt for verification', 'mactrack'),
+			'default' => read_config_option('deletion_verification'),
+			'method' => 'checkbox',
+			),
 		'mt_data_retention' => array(
 			'friendly_name' => __('Data Retention', 'mactrack'),
 			'description' => __('How long should port MAC details be retained in the database.', 'mactrack'),
@@ -977,9 +306,9 @@ function mactrack_config_settings () {
 			'method' => 'drop_array',
 			'default' => '-1',
 			'array' => array(
-				'-1' => __('Auto Detect', 'mactrack'), 
-				':' => __('Colon [:]', 'mactrack'), 
-				'|' => __('Pipe [|]', 'mactrack'), 
+				'-1' => __('Auto Detect', 'mactrack'),
+				':' => __('Colon [:]', 'mactrack'),
+				'|' => __('Pipe [|]', 'mactrack'),
 				' ' => __('Space [ ]', 'mactrack')
 				)
 			),
@@ -1199,10 +528,31 @@ function mactrack_config_settings () {
 	}
 	$settings['path']=$ts;
 
+	$tabs_graphs += array('mactrack' => __('MacTrack Settings', 'mactrack'));
+
+	$settings_user += array(
+		'mactrack' => array(
+			'default_mactrack_tab' => array(
+				'friendly_name' => __('Default Tab', 'mactrack'),
+				'description' => __('Which MacTrack tab would you want to be your Default tab every time you goto the MacTrack second.', 'mactrack'),
+				'method' => 'drop_array',
+				'default' => 'sites',
+				'array' => array(
+					'sites' => __('Sites', 'mactrack'),
+					'devices' => __('Devices', 'mactrack'),
+					'ips' => __('IP Addresses', 'mactrack'),
+					'macs' => __('Mac Addresses', 'mactrack'),
+					'interfaces' => __('Interfaces', 'mactrack'),
+					'dot1x' => __('dot1x Deta', 'mactrack')
+				)
+			)
+		)
+	);
+
 	mactrack_check_upgrade();
 }
 
-function mactrack_draw_navigation_text ($nav) {
+function mactrack_draw_navigation_text($nav) {
 	$nav['mactrack_devices.php:'] = array('title' => __('Device Tracking Devices', 'mactrack'), 'mapping' => 'index.php:', 'url' => 'mactrack_devices.php', 'level' => '1');
 	$nav['mactrack_devices.php:edit'] = array('title' => __('(Edit)', 'mactrack'), 'mapping' => 'index.php:,mactrack_devices.php:', 'url' => '', 'level' => '2');
 	$nav['mactrack_devices.php:import'] = array('title' => __('(Import)', 'mactrack'), 'mapping' => 'index.php:,mactrack_devices.php:', 'url' => '', 'level' => '2');
@@ -1246,19 +596,21 @@ function mactrack_draw_navigation_text ($nav) {
 	return $nav;
 }
 
-function mactrack_show_tab () {
+function mactrack_show_tab() {
 	global $config, $user_auth_realm_filenames;
+
+	load_current_session_value('report', 'sess_mt_tab', read_user_setting('default_mactrack_tab'));
 
 	if (api_user_realm_auth('mactrack_view_macs.php')) {
 		if (substr_count($_SERVER['REQUEST_URI'], 'mactrack_view_')) {
-			print '<a href="' . $config['url_path'] . 'plugins/mactrack/mactrack_view_macs.php"><img src="' . $config['url_path'] . 'plugins/mactrack/images/tab_mactrack_down.png" alt="' . __('Device Tracking', 'mactrack') . '"></a>';
-		}else{
-			print '<a href="' . $config['url_path'] . 'plugins/mactrack/mactrack_view_macs.php"><img src="' . $config['url_path'] . 'plugins/mactrack/images/tab_mactrack.png" alt="' . __('Device Tracking', 'mactrack') . '"></a>';
+			print '<a href="' . $config['url_path'] . 'plugins/mactrack/mactrack_view_' . get_request_var('report') . '.php?report=' . get_request_var('report') . '"><img src="' . $config['url_path'] . 'plugins/mactrack/images/tab_mactrack_down.png" alt="' . __('MacTrack', 'mactrack') . '"></a>';
+		} else {
+			print '<a href="' . $config['url_path'] . 'plugins/mactrack/mactrack_view_' . get_request_var('report') . '.php?report=' . get_request_var('report') . '"><img src="' . $config['url_path'] . 'plugins/mactrack/images/tab_mactrack.png" alt="' . __('MacTrack', 'mactrack') . '"></a>';
 		}
 	}
 }
 
-function mactrack_config_arrays () {
+function mactrack_config_arrays() {
 	global $mactrack_device_types, $mactrack_search_types, $messages;
 	global $menu, $menu_glyphs, $config, $rows_selector;
 	global $mactrack_poller_frequencies, $mactrack_data_retention, $refresh_interval;
@@ -1270,12 +622,12 @@ function mactrack_config_arrays () {
 	}
 
 	$refresh_interval = array(
-		5   => __('%d Seconds', 5),
-		10  => __('%d Seconds', 10),
-		20  => __('%d Seconds', 20),
-		30  => __('%d Seconds', 30),
-		60  => __('%d Minute', 1),
-		300 => __('%d Minutes', 5)
+		5   => __('%d Seconds', 5, 'mactrack'),
+		10  => __('%d Seconds', 10, 'mactrack'),
+		20  => __('%d Seconds', 20, 'mactrack'),
+		30  => __('%d Seconds', 30, 'mactrack'),
+		60  => __('%d Minute', 1, 'mactrack'),
+		300 => __('%d Minutes', 5, 'mactrack')
 	);
 
 	$mactrack_device_types = array(
@@ -1372,7 +724,11 @@ function mactrack_config_arrays () {
 	}
 	$menu = $menu2;
 
-	$menu_glyphs[__('Device Tracking', 'mactrack')] = 'fa fa-shield';
+	if (cacti_version_compare(CACTI_VERSION, '1.2', '<')) {
+		$menu_glyphs[__('Device Tracking', 'mactrack')] = 'fa fa-shield';
+	} else {
+		$menu_glyphs[__('Device Tracking', 'mactrack')] = 'fa fa-shield-alt';
+	}
 	$menu_glyphs[__('Tracking Tools', 'mactrack')] = 'fa fa-bullhorn';
 }
 
@@ -1413,14 +769,14 @@ function mactrack_config_form () {
 	'sysDescr_match' => array(
 		'method' => 'textbox',
 		'friendly_name' => __('System Description Match', 'mactrack'),
-		'description' => __('Provide key information to help Device Tracking detect the type of device.  The wildcard character is the \'%\' sign.', 'mactrack'),
+		'description' => __('Provide key information to help Device Tracking detect the type of device.  The wildcard character is the \'&#37;\' sign.', 'mactrack'),
 		'value' => '|arg1:sysDescr_match|',
 		'max_length' => '250'
 		),
 	'sysObjectID_match' => array(
 		'method' => 'textbox',
 		'friendly_name' => __('Vendor SNMP Object ID Match', 'mactrack'),
-		'description' => __('Provide key information to help Device Tracking detect the type of device.  The wildcard character is the \'%\' sign.', 'mactrack'),
+		'description' => __('Provide key information to help Device Tracking detect the type of device.  The wildcard character is the \'&#37;\' sign.', 'mactrack'),
 		'value' => '|arg1:sysObjectID_match|',
 		'max_length' => '250'
 		),
@@ -1429,7 +785,8 @@ function mactrack_config_form () {
 		'friendly_name' => __('MAC Address Scanning Function', 'mactrack'),
 		'description' => __('The Device Tracking scanning function to call in order to obtain and store port details.  The function name is all that is required.  The following four parameters are assumed and will always be appended: \'my_function($site, &$device, $lowport, $highport)\'.  There is no function required for a pure router.', 'mactrack'),
 		'value' => '|arg1:scanning_function|',
-		'default' => 1,
+		'default' => 0,
+		'none_value' => __('None', 'mactrack'),
 		'sql' => 'select scanning_function as id, scanning_function as name from mac_track_scanning_functions where type="1" order by scanning_function'
 		),
 	'ip_scanning_function' => array(
@@ -1437,7 +794,8 @@ function mactrack_config_form () {
 		'friendly_name' => __('IP Address Scanning Function', 'mactrack'),
 		'description' => __('The Device Tracking scanning function specific to Layer3 devices that track IP Addresses.', 'mactrack'),
 		'value' => '|arg1:ip_scanning_function|',
-		'default' => 1,
+		'default' => 0,
+		'none_value' => __('None', 'mactrack'),
 		'sql' => 'SELECT scanning_function AS id, scanning_function AS name FROM mac_track_scanning_functions WHERE type="2" ORDER BY scanning_function'
 		),
 	'dot1x_scanning_function' => array(
@@ -1445,7 +803,8 @@ function mactrack_config_form () {
 		'friendly_name' => __('802.1x Scanning Function', 'mactrack'),
 		'description' => __('The Device Tracking scanning function specific to Switches with dot1x enabled.', 'mactrack'),
 		'value' => '|arg1:dot1x_scanning_function|',
-		'default' => 1,
+		'default' => '',
+		'none_value' => __('None', 'mactrack'),
 		'sql' => 'SELECT scanning_function AS id, scanning_function AS name FROM mac_track_scanning_functions WHERE type="3" ORDER BY scanning_function'
 		),
 	'serial_number_oid' => array(
@@ -1743,10 +1102,10 @@ function mactrack_config_form () {
 		'value' => '|arg1:term_type|',
 		'default' => 1,
 		'array' => array(
-			0 => __('None', 'mactrack'), 
-			1 => __('Telnet', 'mactrack'), 
-			2 => __('SSH', 'mactrack'), 
-			3 => __('HTTP', 'mactrack'), 
+			0 => __('None', 'mactrack'),
+			1 => __('Telnet', 'mactrack'),
+			2 => __('SSH', 'mactrack'),
+			3 => __('HTTP', 'mactrack'),
 			4 => __('HTTPS', 'mactrack'))
 		),
 	'user_name' => array(
@@ -1789,7 +1148,6 @@ function mactrack_config_form () {
 		'value' => '1'
 		)
 	);
-
 
 	/* file: mactrack_snmp.php, action: item_edit */
 	$fields_mactrack_snmp_item_edit = $fields_mactrack_snmp_item + array(
@@ -1948,7 +1306,7 @@ function mactrack_config_form () {
 	'mac_address' => array(
 		'method' => 'textbox',
 		'friendly_name' => __('MAC Address Match', 'mactrack'),
-		'description' => __('Please enter the MAC Address or Mac Address Match string to be automatically authorized.  If you wish to authorize a group of MAC Addresses, you can use the wildcard character of \'%\' anywhere in the MAC Address.', 'mactrack'),
+		'description' => __('Please enter the MAC Address or Mac Address Match string to be automatically authorized.  If you wish to authorize a group of MAC Addresses, you can use the wildcard character of \'&#37;\' anywhere in the MAC Address.', 'mactrack'),
 		'value' => '|arg1:mac_address|',
 		'default' => '',
 		'max_length' => '40'
@@ -1980,8 +1338,6 @@ function mactrack_config_form () {
 function convert_readstrings() {
 	global $config;
 
-	include_once($config['base_path'] . '/lib/functions.php');
-
 	$sql = 'SELECT DISTINCT ' .
 		'snmp_readstrings, ' .
 		'snmp_version, ' .
@@ -1992,7 +1348,7 @@ function convert_readstrings() {
 
 	$devices = db_fetch_assoc($sql);
 
-	if (sizeof($devices)) {
+	if (cacti_sizeof($devices)) {
 		$i = 0;
 		foreach($devices as $device) {
 			# create new SNMP Option Set
@@ -2003,7 +1359,7 @@ function convert_readstrings() {
 
 			# add each single option derived from readstrings
 			$read_strings = explode(':',$device['snmp_readstrings']);
-			if (sizeof($read_strings)) {
+			if (cacti_sizeof($read_strings)) {
 				foreach($read_strings as $snmp_readstring) {
 					unset($save);
 					$save['id']						= 0;

@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2010-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -13,7 +13,7 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
- | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ | Cacti: The Complete RRDtool-based Graphing Solution                     |
  +-------------------------------------------------------------------------+
  | This code is designed, written, and maintained by the Cacti Group. See  |
  | about.php and/or the AUTHORS file for specific developer information.   |
@@ -21,14 +21,6 @@
  | http://www.cacti.net/                                                   |
  +-------------------------------------------------------------------------+
 */
-
-/* we are not talking to the browser */
-$no_http_headers = true;
-
-/* do NOT run this script through a web browser */
-if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
-	die('<br>This script is only meant to run at the command line.');
-}
 
 /* let PHP run just as long as it has to */
 ini_set('max_execution_time', '55');
@@ -39,8 +31,8 @@ chdir($dir);
 if (strpos($dir, 'plugins') !== false) {
 	chdir('../../');
 }
-include('./include/global.php');
-include_once($config['base_path'] . '/plugins/webseer/functions.php');
+include('./include/cli_check.php');
+include_once($config['base_path'] . '/plugins/webseer/includes/functions.php');
 include_once($config['base_path'] . '/lib/poller.php');
 
 /* process calling arguments */
@@ -51,7 +43,7 @@ $debug = false;
 $force = false;
 $start = microtime(true);
 
-if (sizeof($parms)) {
+if (cacti_sizeof($parms)) {
 	foreach($parms as $parameter) {
 		if (strpos($parameter, '=')) {
 			list($arg, $value) = explode('=', $parameter);
@@ -87,6 +79,8 @@ if (sizeof($parms)) {
 	}
 }
 
+plugin_webseer_check_debug();
+
 echo "Running Service Checks\n";
 
 plugin_webseer_register_server();
@@ -94,27 +88,28 @@ plugin_webseer_register_server();
 // Remove old Logs (ADD A SETTING!!!!!!)
 $t = time() - (86400 * 30);
 
-db_execute_prepared('DELETE FROM plugin_webseer_url_log 
-	WHERE lastcheck < ?', 
+db_execute_prepared('DELETE FROM plugin_webseer_urls_log
+	WHERE lastcheck < FROM_UNIXTIME(?)',
 	array($t));
 
-db_execute_prepared('DELETE FROM plugin_webseer_processes 
-	WHERE UNIX_TIMESTAMP(time) < ?', 
+db_execute_prepared('DELETE FROM plugin_webseer_processes
+	WHERE time < FROM_UNIXTIME(?)',
 	array(time() - 15));
 
-$urls = db_fetch_assoc('SELECT * 
-	FROM plugin_webseer_urls 
+$urls = db_fetch_assoc('SELECT *
+	FROM plugin_webseer_urls
 	WHERE enabled = "on"');
 
 $max = 12;
 
-for ($x = 0; $x < count($urls); $x++) {
+for ($x = 0; $x < cacti_count($urls); $x++) {
 	$url   = $urls[$x];
-	$total = db_fetch_cell('SELECT count(id) 
+	$total = db_fetch_cell('SELECT count(id)
 		FROM plugin_webseer_processes');
 
 	if ($max - $total > 0) {
-		debug('Launching Service Check ' . $urls[$x]['url']);
+		$url['debug_type'] = 'Url';
+		plugin_webseer_debug('Launching Service Check ' . $urls[$x]['url'], $url);
 		$command_string = read_config_option('path_php_binary');
 		$extra_args     = '-q "' . $config['base_path'] . '/plugins/webseer/webseer_process.php" --id=' . $url['id'] . ($debug ? ' --debug':'');
 		exec_background($command_string, $extra_args);
@@ -123,16 +118,18 @@ for ($x = 0; $x < count($urls); $x++) {
 		$x--;
 		usleep(10000);
 
-		db_execute('DELETE FROM plugin_webseer_processes 
-			WHERE UNIX_TIMESTAMP(time) < ' . (time() - 15));
+		db_execute_prepared('DELETE FROM plugin_webseer_processes
+			WHERE time < FROM_UNIXTIME(?)',
+			array(time() - 15));
 	}
 }
 
 while(true) {
-	db_execute('DELETE FROM plugin_webseer_processes 
-		WHERE UNIX_TIMESTAMP(time) < ' . (time() - 15));
+	db_execute_prepared('DELETE FROM plugin_webseer_processes
+		WHERE time < FROM_UNIXTIME(?)',
+		array(time() - 15));
 
-	$running = db_fetch_cell('SELECT COUNT(*) 
+	$running = db_fetch_cell('SELECT COUNT(*)
 		FROM plugin_webseer_processes');
 
 	if ($running == 0) {
@@ -147,7 +144,9 @@ $servers = plugin_webseer_update_servers();
 $end   = microtime(true);
 $ttime = round($end - $start, 3);
 
-cacti_log("WEBSEER STATS: Total Time:$ttime, Service Checks:" . sizeof($urls) . ", Servers:" . $servers, false, 'SYSTEM');
+$stats = 'Time:' . $ttime . ' Checks:' . sizeof($urls) . ' Servers:' . $servers;
+cacti_log("WEBSEER STATS: $stats", false, 'SYSTEM');
+set_config_option('stats_webseer', $stats);
 
 function plugin_webseer_register_server() {
 	global $config;
@@ -162,13 +161,14 @@ function plugin_webseer_register_server() {
 
 	$ipaddress = gethostbyname($hostname);
 
-	$found = db_fetch_cell_prepared('SELECT id 
-		FROM plugin_webseer_servers 
-		WHERE ip = ?', 
+	$found = db_fetch_cell_prepared('SELECT id
+		FROM plugin_webseer_servers
+		WHERE ip = ?',
 		array($ipaddress));
 
 	if (!$found) {
-		debug('Registering Server');
+		$found['debug_type'] = 'Server';
+		plugin_webseer_debug('Registering Server ' . $ipaddress, $found);
 
 		$save = array();
 		$save['enabled']   = 'on';
@@ -201,28 +201,22 @@ function plugin_webseer_register_server() {
 }
 
 function plugin_webseer_update_servers() {
-	$servers = db_fetch_assoc('SELECT * 
-		FROM plugin_webseer_servers 
-		WHERE isme = 0 
+	$servers = db_fetch_assoc('SELECT *
+		FROM plugin_webseer_servers
+		WHERE isme = 0
 		AND enabled = 1');
 
-	foreach ($servers as $server) {
-		$cc = new cURL();
-		$cc->host['url'] = $server['url'];
-		$data = array();
-		$data['action'] = 'HEARTBEAT';
-		$results = $cc->post($server['url'], $data);
+	if ($servers !== false && cacti_sizeof($servers)) {
+		foreach ($servers as $server) {
+			$server['debug_type'] = 'Server';
+			$cc = new cURL(true, 'cookies.txt', $server['compression'], '', $server);;
+			$data = array();
+			$data['action'] = 'HEARTBEAT';
+			$results = $cc->post($server['url'], $data);
+		}
 	}
 
-	return sizeof($servers);
-}
-
-function debug($message) {
-	global $debug;
-
-	if ($debug) {
-		print "DEBUG: " . trim($message) . "\n";
-	}
+	return cacti_sizeof($servers);
 }
 
 /*  display_version - displays version information */

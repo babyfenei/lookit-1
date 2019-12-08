@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2008-2017 The Cacti Group                                 |
+ | Copyright (C) 2008-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -22,7 +22,7 @@
  +-------------------------------------------------------------------------+
 */
 
-function plugin_monitor_install () {
+function plugin_monitor_install() {
 	/* core plugin functionality */
 	api_plugin_register_hook('monitor', 'top_header_tabs', 'monitor_show_tab', 'setup.php');
 	api_plugin_register_hook('monitor', 'top_graph_header_tabs', 'monitor_show_tab', 'setup.php');
@@ -32,6 +32,7 @@ function plugin_monitor_install () {
 	api_plugin_register_hook('monitor', 'config_form', 'monitor_config_form', 'setup.php');
 	api_plugin_register_hook('monitor', 'config_settings', 'monitor_config_settings', 'setup.php');
 	api_plugin_register_hook('monitor', 'poller_bottom', 'monitor_poller_bottom', 'setup.php');
+	api_plugin_register_hook('monitor', 'page_head', 'plugin_monitor_page_head', 'setup.php');
 
 	/* device actions and interaction */
 	api_plugin_register_hook('monitor', 'api_device_save', 'monitor_api_device_save', 'setup.php');
@@ -83,7 +84,7 @@ function monitor_device_table_bottom() {
 	foreach($criticalities as $index => $crit) {
 		if ($index == get_request_var('criticality')) {
 			$select .= '<option selected value="' . $index . '">' . $crit . '</option>';
-		}else{
+		} else {
 			$select .= '<option value="' . $index . '">' . $crit . '</option>';
 		}
 	}
@@ -123,16 +124,25 @@ function monitor_device_table_bottom() {
 	<?php
 }
 
-function plugin_monitor_uninstall () {
+function plugin_monitor_uninstall() {
 	db_execute('DROP TABLE IF EXISTS plugin_monitor_notify_history');
 	db_execute('DROP TABLE IF EXISTS plugin_monitor_reboot_history');
 	db_execute('DROP TABLE IF EXISTS plugin_monitor_uptime');
 }
 
-function plugin_monitor_check_config () {
+function plugin_monitor_page_head() {
+	global $config;
+
+	print get_md5_include_css('plugins/monitor/monitor.css') . PHP_EOL;
+	if (file_exists($config['base_path'] . '/plugins/monitor/themes/' . get_selected_theme() . '/monitor.css')) {
+		print get_md5_include_css('plugins/monitor/themes/' . get_selected_theme() . '/monitor.css') . PHP_EOL;
+	}
+}
+
+function plugin_monitor_check_config() {
 	global $config;
 	// Here we will check to ensure everything is configured
-	monitor_check_upgrade ();
+	monitor_check_upgrade();
 
 	include_once($config['library_path'] . '/database.php');
 	$r = read_config_option('monitor_refresh');
@@ -157,24 +167,26 @@ function plugin_monitor_check_config () {
 	return true;
 }
 
-function plugin_monitor_upgrade () {
+function plugin_monitor_upgrade() {
 	// Here we will upgrade to the newest version
-	monitor_check_upgrade ();
+	monitor_check_upgrade();
 	return false;
 }
 
-function monitor_check_upgrade () {
+function monitor_check_upgrade() {
     $files = array('plugins.php', 'monitor.php');
     if (isset($_SERVER['PHP_SELF']) && !in_array(basename($_SERVER['PHP_SELF']), $files)) {
         return;
     }
 
-	$info    = plugin_monitor_version ();
+	$info    = plugin_monitor_version();
 	$current = $info['version'];
 	$old     = read_config_option('plugin_monitor_version');
 
+	api_plugin_register_hook('monitor', 'page_head', 'plugin_monitor_page_head', 'setup.php', 1);
+
 	if ($current != $old) {
-		monitor_setup_table ();
+		monitor_setup_table();
 
 		// Set the new version
 		db_execute("UPDATE plugin_config SET version='$current' WHERE directory='monitor'");
@@ -188,7 +200,7 @@ function monitor_check_upgrade () {
 	}
 }
 
-function plugin_monitor_version () {
+function plugin_monitor_version() {
 	global $config;
 	$info = parse_ini_file($config['base_path'] . '/plugins/monitor/INFO', true);
 	return $info['info'];
@@ -208,26 +220,26 @@ function monitor_device_action_execute($action) {
 			for ($i = 0; ($i < count($selected_items)); $i++) {
 				if ($action == 'monitor_enable') {
 					db_execute("UPDATE host SET monitor='on' WHERE id='" . $selected_items[$i] . "'");
-				}else if ($action == 'monitor_disable') {
+				} else if ($action == 'monitor_disable') {
 					db_execute("UPDATE host SET monitor='' WHERE id='" . $selected_items[$i] . "'");
 				}
 			}
-		}else{
+		} else {
 			for ($i = 0; ($i < count($selected_items)); $i++) {
 				reset($fields_host_edit);
-				while (list($field_name, $field_array) = each($fields_host_edit)) {
+				foreach ($fields_host_edit as $field_name => $field_array) {
 					if (isset_request_var("t_$field_name")) {
 						if ($field_name == 'monitor_alert_baseline') {
 							$cur_time = db_fetch_cell_prepared('SELECT cur_time FROM host WHERE id = ?', array($selected_items[$i]));
 							if ($cur_time > 0) {
 								db_execute_prepared("UPDATE host SET monitor_alert = CEIL(avg_time*?) WHERE id = ?", array(get_nfilter_request_var($field_name), $selected_items[$i]));
 							}
-						}elseif ($field_name == 'monitor_warn_baseline') {
+						} elseif ($field_name == 'monitor_warn_baseline') {
 							$cur_time = db_fetch_cell_prepared('SELECT cur_time FROM host WHERE id = ?', array($selected_items[$i]));
 							if ($cur_time > 0) {
 								db_execute_prepared("UPDATE host SET monitor_warn = CEIL(avg_time*?) WHERE id = ?", array(get_nfilter_request_var($field_name), $selected_items[$i]));
 							}
-						}else{
+						} else {
 							db_execute_prepared("UPDATE host SET $field_name = ? WHERE id = ?", array(get_nfilter_request_var($field_name), $selected_items[$i]));
 						}
 					}
@@ -332,7 +344,7 @@ function monitor_scan_dir() {
 	$d->close();
 	asort($files); // sort the files
 	array_unshift($files, 'None'); // prepend the None option
-	
+
 	return $files;
 }
 
@@ -392,6 +404,11 @@ function monitor_config_settings() {
 			'method' => 'spacer',
 			'collapsible' => 'true'
 		),
+		'monitor_new_enabled' => array(
+			'friendly_name' => __('Enable on new devices', 'monitor'),
+			'description' => __('Check this to automatically enable monitoring when creating new devices', 'monitor'),
+			'method' => 'checkbox',
+		),
 		'monitor_log_storage' => array(
 			'friendly_name' => __('Notification/Reboot Log Retention', 'monitor'),
 			'description' => __('Keep Notification and Reboot Logs for this number of days.', 'monitor'),
@@ -437,6 +454,7 @@ function monitor_config_settings() {
 			'default' => 'default',
 			'array' => array(
 				'default'  => __('Default', 'monitor'),
+				'list'     => __('List', 'monitor'),
 				'tiles'    => __('Tiles', 'monitor'),
 				'tilesadt' => __('Tiles & Downtime', 'monitor')
 			)
@@ -497,6 +515,12 @@ function monitor_config_settings() {
 			'description' => __('Should Device Reboot Notifications be sent to users?', 'monitor'),
 			'default' => 'on',
 		),
+		'monitor_reboot_thold' => array(
+			'friendly_name' => __('Include Threshold Alert Lists', 'monitor'),
+			'method' => 'checkbox',
+			'description' => __('Should Threshold Alert Lists also receive notification', 'monitor'),
+			'default' => 'on',
+		),
 		'monitor_subject' => array(
 			'friendly_name' => __('Subject', 'monitor'),
 			'description' => __('Enter a Reboot message subject for the Reboot Nofication.', 'monitor'),
@@ -512,6 +536,25 @@ function monitor_config_settings() {
 			'textarea_rows' => 4,
 			'textarea_cols' => 80,
 			'default' => __('<h1>Monitor Reboot Notification</h1><p>The following Device\'s were Rebooted.  See details below for additional information.</p><br><DETAILS>', 'monitor')
+		),
+		'monitor_email_header' => array(
+			'friendly_name' => __('Notification Email Addresses', 'monitor'),
+			'method' => 'spacer',
+			'collapsible' => 'true'
+		),
+		'monitor_fromname' => array(
+			'friendly_name' => __('From Name', 'monitor'),
+			'description' => __('Enter the Email Name to send the notifications form', 'monitor'),
+			'method' => 'textbox',
+			'size' => '60',
+			'max_length' => '255'
+		),
+		'monitor_fromemail' => array(
+			'friendly_name' => __('From Address', 'monitor'),
+			'description' => __('Enter the Email Address to send the notification from', 'monitor'),
+			'method' => 'textbox',
+			'size' => '60',
+			'max_length' => '255'
 		),
 		'monitor_list' => array(
 			'friendly_name' => __('Notification List', 'thold'),
@@ -555,12 +598,12 @@ function monitor_top_graph_refresh($refresh) {
 function monitor_show_tab() {
 	global $config;
 
-	monitor_check_upgrade ();
+	monitor_check_upgrade();
 
 	if (api_user_realm_auth('monitor.php')) {
 		if (substr_count($_SERVER['REQUEST_URI'], 'monitor.php')) {
 			print '<a href="' . $config['url_path'] . 'plugins/monitor/monitor.php"><img src="' . $config['url_path'] . 'plugins/monitor/images/tab_monitor_down.gif" alt="' . __('Monitor', 'monitor') . '"></a>';
-		}else{
+		} else {
 			print '<a href="' . $config['url_path'] . 'plugins/monitor/monitor.php"><img src="' . $config['url_path'] . 'plugins/monitor/images/tab_monitor.gif" alt="' . __('Monitor', 'monitor') . '"></a>';
 		}
 	}
@@ -604,9 +647,14 @@ function monitor_config_form () {
 				'friendly_name' => __('Monitor Device', 'monitor'),
 				'description' => __('Check this box to monitor this Device on the Monitor Tab.', 'monitor'),
 				'value' => '|arg1:monitor|',
-				'default' => '',
 				'form_id' => false
 			);
+
+			$host_id = form_input_validate(get_nfilter_request_var('id'), 'id', 0, true, 3);
+			if (!($host_id > 0)) {
+				$fields_host_edit3['monitor']['default'] = monitor_get_default($host_id);
+			}
+
 			$fields_host_edit3['monitor_criticality'] = array(
 				'friendly_name' => __('Device Criticality', 'monitor'),
 				'description' => __('What is the Criticality of this Device.', 'monitor'),
@@ -666,11 +714,25 @@ function monitor_config_form () {
 	$fields_host_edit = $fields_host_edit3;
 }
 
+function monitor_get_default($host_id) {
+	$monitor_new_device = '';
+	if ($host_id <= 0) {
+		$monitor_new_device = db_fetch_cell('SELECT value
+						     FROM settings
+						     WHERE name = \'monitor_new_enabled\'');
+	}
+	//file_put_contents('/tmp/monitor.log',"monitor_get_default($host_id) retured ".var_export($monitor_new_device,true)."\n",FILE_APPEND);
+	return $monitor_new_device;
+}
+
 function monitor_api_device_save($save) {
+	$monitor_default = monitor_get_default($save['id']);
 	if (isset_request_var('monitor')) {
-		$save['monitor'] = form_input_validate(get_nfilter_request_var('monitor'), 'monitor', '', true, 3);
+		//file_put_contents('/tmp/monitor.log',"monitor_api_device_save_var(".$save['id'].") retured ".var_export($monitor_default,true)."\n",FILE_APPEND);
+		$save['monitor'] = form_input_validate(get_nfilter_request_var('monitor'), 'monitor', $monitor_default, true, 3);
 	} else {
-		$save['monitor'] = form_input_validate('', 'monitor', '', true, 3);
+		//file_put_contents('/tmp/monitor.log',"monitor_api_device_save(".$save['id'].") retured ".var_export($monitor_default,true)."\n",FILE_APPEND);
+		$save['monitor'] = form_input_validate($monitor_default, 'monitor', '', true, 3);
 	}
 
 	if (isset_request_var('monitor_text')) {
@@ -723,14 +785,14 @@ function monitor_api_device_save($save) {
 }
 
 function monitor_draw_navigation_text ($nav) {
-   $nav['monitor.php:'] = array('title' => __('Monitoring', 'monitor'), 'mapping' => '', 'url' => 'monitor.php', 'level' => '1');
+   $nav['monitor.php:'] = array('title' => __('Monitoring', 'monitor'), 'mapping' => '', 'url' => 'monitor.php', 'level' => '0');
 
    return $nav;
 }
 
 function monitor_setup_table() {
 	if (!db_table_exists('plugin_monitor_notify_history')) {
-		db_execute("CREATE TABLE plugin_monitor_notify_history (
+		db_execute("CREATE TABLE IF NOT EXISTS plugin_monitor_notify_history (
 			id int(10) unsigned NOT NULL AUTO_INCREMENT,
 			host_id int(10) unsigned DEFAULT NULL,
 			notify_type tinyint(3) unsigned DEFAULT NULL,
@@ -766,6 +828,18 @@ function monitor_setup_table() {
 			KEY uptime (uptime))
 			ENGINE=InnoDB
 			COMMENT='Keeps Track of the Devices last uptime to track agent restarts and reboots'");
+	}
+
+	if (!db_table_exists('plugin_monitor_dashboards')) {
+		db_execute("CREATE TABLE IF NOT EXISTS plugin_monitor_dashboards (
+			id int(10) unsigned auto_increment,
+			user_id int(10) unsigned DEFAULT '0',
+			name varchar(128) DEFAULT '',
+			url varchar(1024) DEFAULT '',
+			PRIMARY KEY (id),
+			KEY user_id (user_id))
+			ENGINE=InnoDB
+			COMMENT='Stores predefined dashboard information for a user or users'");
 	}
 
 	api_plugin_db_add_column ('monitor', 'host', array('name' => 'monitor', 'type' => 'char(3)', 'NULL' => false, 'default' => 'on', 'after' => 'disabled'));

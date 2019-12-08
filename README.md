@@ -1,10 +1,10 @@
 
 #### 功能介绍
-1.本脚本自动安装cacti1.1.X版本
+1.本脚本自动安装cacti1.2.X及最新版本
 
-2.自动安装cacti1.1.X、rrdtool1.7.0、spine1.1.X到系统
+2.自动安装cacti1.2.X、rrdtool1.7.0、spine1.2.X到系统
 
-3.本脚本运行在centos7.3下
+3.本脚本测试运行在centos7.6下
 
 4.本脚本自动添加中文微软雅黑字体到centos系统中,rrdtool及cacti默认支持中文
 

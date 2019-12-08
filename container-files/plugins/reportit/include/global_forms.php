@@ -40,12 +40,37 @@ $fields_template_edit = array(
 		'method' => 'spacer',
 		'collapsible' => 'true'
 	),
-	'template_description' => array(
+	'template_name' => array(
 		'friendly_name' => __('Name'),
 		'method' => 'textbox',
 		'max_length' => '100',
 		'description' => __('The unique name given to this Report Template.', 'reportit'),
+		'value' => '|arg1:name|'
+	),
+	'template_description' => array(
+		'friendly_name' => __('Description', 'reportit'),
+		'method' => 'textarea',
+		'max_length' => '255',
+		'textarea_cols' => '80',
+		'textarea_rows' => '5',
+		'description' => __('A longer description of this Report Template.', 'reportit'),
 		'value' => '|arg1:description|'
+	),
+	'template_version' => array(
+		'friendly_name' => __('Version', 'reportit'),
+		'method' => 'textbox',
+		'max_length' => '100',
+		'description' => __('A version number for this template', 'reportit'),
+		'default' => '1.0',
+		'value' => '|arg1:version|'
+	),
+	'template_author' => array(
+		'friendly_name' => __('Author', 'reportit'),
+		'method' => 'textbox',
+		'max_length' => '100',
+		'description' => __('The author of this template', 'reportit'),
+		'default' => get_username($_SESSION['sess_user_id']),
+		'value' => '|arg1:author|'
 	),
 	'template_enabled' => array(
 		'method' => 'checkbox',
@@ -57,7 +82,7 @@ $fields_template_edit = array(
 		'friendly_name' => __('Locked', 'reportit'),
 		'method' => 'checkbox',
 		'description' => __('The status "locked" avoids any kind of modification to your report template as well as assigned measurands and variable definitions', 'reportit'),
-		'value' => '|arg1:locked|'
+		'value' => '|arg1:locked|',
 	),
 	'template_filter' => array(
 		'friendly_name' => __('Additional Pre-filter', 'reportit'),
@@ -69,7 +94,7 @@ $fields_template_edit = array(
 	),
 	'template_export_folder' => array(
 		'friendly_name' => __('Export Path', 'reportit'),
-		'description' => __('Optional: The path to an folder for saving the exports.  If it does not exist ReportIT automatically tries to create it during the first scheduled calculation, else it will try to create a new subfolder within the main export folder using the template id.', 'reportit'),
+		'description' => __('Optional: The path to an folder for saving the exports.  If it does not exist ReportIt automatically tries to create it during the first scheduled calculation, else it will try to create a new subfolder within the main export folder using the template id.', 'reportit'),
 		'method' => 'dirpath',
 		'max_length' => '255',
 		'value' => '|arg1:export_folder|',
@@ -80,12 +105,19 @@ $fields_template_edit = array(
 		'method' => 'spacer',
 		'collapsible' => 'true'
 	),
-	'template_data_template' => array(
+	'template_data_template_label' => array(
 		'friendly_name' => __('Data Template', 'reportit'),
-		'method' => 'custom',
+		'method' => 'label',
 		'max_length' => '100',
 		'description' => __('The name of the data template this Report Template depends on.', 'reportit'),
 		'value' => '|arg1:data_template_name|'
+	),
+	'template_data_template' => array(
+		'friendly_name' => __('Data Template', 'reportit'),
+		'method' => 'hidden',
+		'max_length' => '100',
+		'description' => __('The name of the data template this Report Template depends on.', 'reportit'),
+		'value' => '|arg1:data_template_id|'
 	)
 );
 
@@ -98,7 +130,7 @@ $fields_template_export = array(
 		'friendly_name' => __('Report Template', 'reportit'),
 		'description' => __('Choose one of your Report Templates to export to XML.', 'reportit'),
 		'method' => 'drop_sql',
-		'sql' => 'SELECT id, description as name FROM reportit_templates WHERE locked = 0 ORDER BY description',
+		'sql' => 'SELECT id, description as name FROM plugin_reportit_templates WHERE locked = 0 ORDER BY description',
 		'default' => 0,
 		'none_value' => 'None',
 		'value' => '',

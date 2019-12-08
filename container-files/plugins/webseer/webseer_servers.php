@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2010-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -13,7 +13,7 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
- | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ | Cacti: The Complete RRDtool-based Graphing Solution                     |
  +-------------------------------------------------------------------------+
  | This code is designed, written, and maintained by the Cacti Group. See  |
  | about.php and/or the AUTHORS file for specific developer information.   |
@@ -24,7 +24,7 @@
 
 chdir('../../');
 include_once('./include/auth.php');
-include_once($config['base_path'] . '/plugins/webseer/functions.php');
+include_once($config['base_path'] . '/plugins/webseer/includes/functions.php');
 
 /* global colors */
 $webseer_bgcolors = array(
@@ -47,7 +47,7 @@ if (isset_request_var('drp_action')) {
 
 function do_webseer() {
 	$hosts = array();
-	while (list($var,$val) = each($_REQUEST)) {
+	foreach ($_REQUEST as $var => $val) {
 		if (preg_match('/^chk_(.*)$/', $var, $matches)) {
 			$del = $matches[1];
 			input_validate_input_number($del);
@@ -56,20 +56,20 @@ function do_webseer() {
 	}
 
 	switch (get_nfilter_request_var('drp_action')) {
-		case 1:	// Delete
+		case WEBSEER_ACTION_SERVER_DELETE: // Delete
 			foreach ($hosts as $del => $rra) {
 				db_execute_prepared('DELETE FROM plugin_webseer_servers WHERE id = ?', array($del));
 				db_execute_prepared('DELETE FROM plugin_webseer_servers_log WHERE server= ?', array($del));
 				plugin_webseer_delete_remote_server($del);
 			}
 			break;
-		case 2:	// Disabled
+		case WEBSEER_ACTION_SERVER_DISABLE: // Disabled
 			foreach ($hosts as $del => $rra) {
 				db_execute_prepared("UPDATE plugin_webseer_servers SET enabled = '' WHERE id = ?", array($del));
 				plugin_webseer_enable_remote_server($del, false);
 			}
 			break;
-		case 3:	// Enabled
+		case WEBSEER_ACTION_SERVER_ENABLE: // Enabled
 			foreach ($hosts as $del => $rra) {
 				db_execute_prepared("UPDATE plugin_webseer_servers SET enabled = 'on' WHERE id = ?", array($del));
 				plugin_webseer_enable_remote_server($del, true);
@@ -81,7 +81,7 @@ function do_webseer() {
 	exit;
 }
 
-/** 
+/**
  *  This is a generic funtion for this page that makes sure that
  *  we have a good request.  We want to protect against people who
  *  like to create issues with Cacti.
@@ -136,11 +136,11 @@ function webseer_show_history() {
 		exit;
 	}
 
-	$result = db_fetch_assoc_prepared('SELECT plugin_webseer_url_log.*, plugin_webseer_urls.url 
-		FROM plugin_webseer_url_log,plugin_webseer_urls 
-		WHERE plugin_webseer_urls.id = ? 
-		AND plugin_webseer_url_log.url_id = plugin_webseer_urls.id 
-		ORDER BY plugin_webseer_url_log.lastcheck DESC',
+	$result = db_fetch_assoc_prepared('SELECT plugin_webseer_urls_log.*, plugin_webseer_urls.url
+		FROM plugin_webseer_urls_log,plugin_webseer_urls
+		WHERE plugin_webseer_urls.id = ?
+		AND plugin_webseer_urls_log.url_id = plugin_webseer_urls.id
+		ORDER BY plugin_webseer_urls_log.lastcheck DESC',
 		array($id));
 
 	top_header();
@@ -150,13 +150,13 @@ function webseer_show_history() {
 	html_start_box('', '100%', '', '4', 'center', '');
 
 	$display_text = array(
-		__('Date', 'webseer'), 
-		__('URL', 'webseer'), 
-		__('Error', 'webseer'), 
-		__('HTTP Code', 'webseer'), 
-		__('DNS', 'webseer'), 
-		__('Connect', 'webseer'), 
-		__('Redirect', 'webseer'), 
+		__('Date', 'webseer'),
+		__('URL', 'webseer'),
+		__('Error', 'webseer'),
+		__('HTTP Code', 'webseer'),
+		__('DNS', 'webseer'),
+		__('Connect', 'webseer'),
+		__('Redirect', 'webseer'),
 		__('Total', 'webseer')
 	);
 
@@ -164,7 +164,7 @@ function webseer_show_history() {
 
 	$c=0;
 	$i=0;
-	if (count($result)) {
+	if (cacti_count($result)) {
 		foreach ($result as $row) {
 			$c++;
 
@@ -196,13 +196,7 @@ function webseer_show_history() {
 }
 
 function list_urls () {
-	global $colors, $webseer_bgcolors, $item_rows, $config, $hostid;
-
-	$ds_actions = array(
-		1 => __('Delete', 'webseer'), 
-		2 => __('Disable', 'webseer'), 
-		3 => __('Enable', 'webseer')
-	);
+	global $colors, $webseer_actions_server, $webseer_bgcolors, $item_rows, $config, $hostid;
 
 	webseer_request_validation();
 
@@ -238,9 +232,13 @@ function list_urls () {
 	$sql_order = get_order_string();
 	$sql_limit = ' LIMIT ' . ($rows*(get_request_var('page')-1)) . ',' . $rows;
 
-	$result = db_fetch_assoc("SELECT * FROM plugin_webseer_servers $sql_where $sql_order $sql_limit");
+	$result = db_fetch_assoc("SELECT *
+		FROM plugin_webseer_servers
+		$sql_where
+		$sql_order
+		$sql_limit");
 
-	$total_rows = count(db_fetch_assoc("SELECT id FROM plugin_webseer_servers $sql_where"));
+	$total_rows = cacti_count(db_fetch_assoc("SELECT id FROM plugin_webseer_servers $sql_where"));
 
 	$nav = html_nav_bar('webseer_servers.php', MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 8, __('Servers', 'webseer'), 'page', 'main');
 
@@ -248,12 +246,15 @@ function list_urls () {
 
 	print $nav;
 
-	html_start_box('', '100%', $colors['header'], '4', 'center', '');
+	$header_color = '';
+	if (isset($colors['header'])) {
+		$header_color = $colors['header'];
+	}
+	html_start_box('', '100%', $header_color, '4', 'center', '');
 
 	$display_text = array(
 		'nosort'    => array(__('Actions', 'webseer'), 'ASC'),
 		'name'      => array(__('Name', 'webseer'), 'ASC'),
-		'url'       => array(__('URL', 'webseer'), 'ASC'),
 		'ip'        => array(__('IP Address', 'webseer'), 'ASC'),
 		'enabled'   => array(__('Enabled', 'webseer'), 'ASC'),
 		'location'  => array(__('Location', 'webseer'), 'ASC'),
@@ -264,7 +265,7 @@ function list_urls () {
 
 	html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'));
 
-	if (sizeof($result)) {
+	if (cacti_sizeof($result)) {
 		foreach ($result as $row) {
 			if ($row['isme'] == 0 && $row['lastcheck'] < time() - 180) {
 				$alertstat='yes';
@@ -281,22 +282,21 @@ function list_urls () {
 					<img src='" . $config['url_path'] . "plugins/webseer/images/edit_object.png' alt='' title='" . __esc('Edit Site', 'webseer') . "'>
 				</a>";
 
-			if ($row['enabled'] == '') {
-				print "<a class='pic' href='" . htmlspecialchars($config['url_path'] . 'plugins/webseer/webseer_servers.php?drp_action=3&chk_' . $row['id']) . "=1'>
+			if ($row['enabled'] == '' || $row['enabled'] == '0') {
+				print "<a class='pic' href='" . htmlspecialchars($config['url_path'] . 'plugins/webseer/webseer_servers.php?drp_action=' . WEBSEER_ACTION_SERVER_ENABLE . '&chk_' . $row['id']) . "=1'>
 					<img src='" . $config['url_path'] . "plugins/webseer/images/enable_object.png' alt='' title='" . __esc('Enable Site', 'webseer') . "'>
 				</a>";
 			} else {
-				print "<a class='pic' href='" . htmlspecialchars($config['url_path'] . 'plugins/webseer/webseer_servers.php?drp_action=2&chk_' . $row['id']) . "=1'>
+				print "<a class='pic' href='" . htmlspecialchars($config['url_path'] . 'plugins/webseer/webseer_servers.php?drp_action=' . WEBSEER_ACTION_SERVER_DISABLE . '&chk_' . $row['id']) . "=1'>
 					<img src='" . $config['url_path'] . "plugins/webseer/images/disable_object.png' alt='' title='" . __esc('Disable Site', 'webseer') . "'>
 				</a>";
 			}
 
 			print "<a class='pic' href='" . htmlspecialchars($config['url_path'] . 'plugins/webseer/webseer_servers.php?view_history=1&id=' . $row['id']) . "'><img src='" . $config['url_path'] . "plugins/webseer/images/view_history.gif' alt='' title='" . __esc('View History', 'webseer') . "'></td>";
 
-			form_selectable_cell($row['name'], $row['id']);
-			form_selectable_cell("<a class='linkEditMain' href='" . $row['url'] . "' target=_new>" . $row['url'] . '</a>', $row['id']);
+			form_selectable_cell($row['name'], $row['id'], '', '', html_escape($row['url']));
 			form_selectable_cell($row['ip'], $row['id']);
-			form_selectable_cell($row['enabled'] == 'on' ? __('Yes', 'webseer'):__('No', 'webseer'), $row['id']);
+			form_selectable_cell($row['enabled'] == '' || $row['enabled'] == '0' ? __('No', 'webseer'): __('Yes', 'webseer'), $row['id']);
 			form_selectable_cell($row['location'], $row['id']);
 			form_selectable_cell($row['lastcheck'], $row['id']);
 			form_selectable_cell($row['master'] == 1 ? __('Yes', 'webseer'):__('No', 'webseer'), $row['id']);
@@ -311,13 +311,30 @@ function list_urls () {
 
 	html_end_box(false);
 
-	if (sizeof($result) > 0) {
+	if (cacti_sizeof($result) > 0) {
 		print $nav;
 	}
 
-	draw_actions_dropdown($ds_actions);
+	draw_actions_dropdown($webseer_actions_server);
 
 	form_end();
+
+	?>
+	<script type='text/javascript'>
+	$(function() {
+		$('#webseer2_child').find('.cactiTooltipHint').each(function() {
+			title = $(this).attr('title');
+
+			if (title != undefined && title.indexOf('/') >= 0) {
+				$(this).click(function() {
+					window.open(title, 'webseer');
+				});
+			}
+		});
+	});
+
+	</script>
+	<?php
 
 	bottom_footer();
 }
@@ -375,10 +392,10 @@ function webseer_filter() {
 						<?php print __('State', 'webseer');?>
 					</td>
 					<td>
-						<select id='state'> 
+						<select id='state'>
 							<option value='-1'><?php print __('Any', 'webseer');?></option>
 							<?php
-							foreach (array('2' => __('Disabled', 'webseer'),'1' => __('Enabled', 'webseer'), 3 => __('Triggered', 'webseer')) as $key => $value) {
+							foreach (array('2' => __('Disabled', 'webseer'), '1' => __('Enabled', 'webseer'), 3 => __('Triggered', 'webseer')) as $key => $value) {
 								echo "<option value='" . $key . "'" . ($key == get_request_var('state') ? ' selected' : '') . '>' . $value . '</option>';
 							}
 							?>
@@ -403,7 +420,7 @@ function webseer_filter() {
 						<select id='rows'>
 							<?php
 							print "<option value='-1'" . (get_request_var('rows') == $key ? ' selected':'') . ">" . __('Default', 'webseer') . "</option>\n";
-							if (sizeof($item_rows)) {
+							if (cacti_sizeof($item_rows)) {
 								foreach ($item_rows as $key => $value) {
 									print "<option value='" . $key . "'"; if (get_request_var('rows') == $key) { print ' selected'; } print '>' . htmlspecialchars($value) . "</option>\n";
 								}

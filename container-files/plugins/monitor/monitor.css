@@ -1,7 +1,18 @@
-.monitor {
-	display: table;
+.monitor_container {
+	display: flex;
+	flex-wrap: wrap;
 	margin-left: auto;
 	margin-right: auto;
+	justify-content: space-around;
+}
+
+.monitor_sub_container {
+	display: flex-root;
+	flex: 1;
+	flex-wrap: wrap;
+	margin-left: auto;
+	margin-right: auto;
+	justify-content: space-around;
 }
 
 .monitor_main {
@@ -14,8 +25,36 @@
 	margin: 4px;
 }
 
+.monitorTable {
+	display: table;
+	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	display: table;
+	line-height: 16px;
+	color: rgb(68, 68, 68);
+}
+
+.monitorFooter {
+	display: table;
+	width: 100%;
+}
+
+.monitorFooterText {
+	color: gray;
+}
+
+.monitorFooterTextBold {
+	color: black;
+}
+
+.monitorLinkIcon {
+	vertical-align: middle;
+	padding: 3px;
+	font-size: 20px;
+}
+
 .monitor_frame {
-	float: left;
 	display: table-cell;
 }
 
@@ -25,6 +64,11 @@
 	width: 100%;
 }
 
+.monitor_ul {
+	padding: 2px;
+	margin: 0px;
+}
+
 .monitor_tree_title table:first-child {
 	width: 100%;
 	margin-left: auto;
@@ -32,8 +76,8 @@
 }
 
 .monitor_tree_frame {
+	display: inline-block;
 	vertical-align: top;
-	float: left;
 	position: relative;
 	padding: 3px;
 	margin: 4px;
@@ -41,14 +85,12 @@
 }
 
 .monitor_device_frame {
-	text-align:center;
-	display: block;
-	padding: 3px;
-	margin: 2px;
-	float: left;
+	text-align: center;
+	display: inline-block;
 }
 
 .monitor_device_frame a {
+	padding: 3px;
 	display: block;
 }
 
@@ -56,14 +98,323 @@
 	position: fixed;
 	left: 0;
 	bottom: 0;
-	display: table;
+	display: flex;
+	flex-flow: row wrap;
 	margin-left: auto;
 	margin-right: auto;
 	width: 100%;
 }
 
-.monitor_legend table {
+.monitor_legend > * {
+	padding: 0px 2px;
+	white-space: nowrap;
+	min-width: 100px;
+	font-size: 11px;
+	flex: 1 9%;
+	font-weight: normal;
+}
+
+// Extra Small Classification
+.monitor_exsmall {
+	height: 55px;
+	width: 35px;
+}
+
+.monitor_exsmall_title {
+	display: inline-block;
+	text-align: center;
+	width: 90px !important;
+	word-wrap: break-word;
+	overflow: hidden;
+}
+
+.monitor_exsmall_tiles {
+	height: 20px;
+	min-width: 20px;
+}
+
+.monitor_exsmall_tilesadt {
+	height: 35px;
+	width: 94px;
+}
+
+.monitor_exsmall td {
+	font-size: 12px;
+}
+
+.monitor_exsmall .monitorLinkIcon {
+	font-size: 20px;
+}
+
+.monitor_exsmall i, .monitor_exsmall_tiles i, .monitor_exsmall_tilesadt i {
+	font-size: 10px;
+}
+
+.monitor_device_exsmall {
+	font-size: 10px;
 	padding: 2px;
+}
+
+// Small Classification
+.monitor_small {
+	height: 58px;
+	min-width: 28px;
+}
+
+.monitor_small_title {
+	display: inline-block;
+	text-align: center;
+	width: 90px !important;
+	word-wrap: break-word;
+	overflow: hidden;
+}
+
+.monitor_small_tiles {
+	height: 28px;
+	min-width: 28px;
+}
+
+.monitor_small_tilesadt {
+	height: 45px;
+	width: 94px;
+}
+
+.monitor_small i, .monitor_small_tiles i, .monitor_small_tilesadt i {
+	font-size: 20px;
+	min-width: 28px;
+}
+
+.monitor_small .monitorLinkIcon {
+	font-size: 20px;
+}
+
+.monitor_small td {
+	font-size: 12px;
+}
+
+.monitor_device_small {
+	font-size: 10px;
+	padding: 2px;
+	min-width: 28px;
+}
+
+// Medium Classification
+.monitor_medium {
+	height: 78px;
+	min-width: 58px;
+}
+
+.monitor_medium_title {
+	display: inline-block;
+	text-align: center;
+	width: 100px !important;
+	word-wrap: break-word;
+	overflow: hidden;
+}
+
+.monitor_medium_tiles {
+	height: 48px;
+	min-width: 58px;
+}
+
+.monitor_medium_tilesadt {
+	height: 65px;
+	width: 108px;
+}
+
+.monitor_medium i, .monitor_medium_tiles i, .monitor_medium_tilesadt i {
+	font-size: 40px;
+	min-width: 58px;
+}
+
+.monitor_medium td {
+	font-size: 13px;
+}
+
+.monitor_medium a, .monitor_medium_tiles a, .monitor_medium_tilesadt a {
+	font-size: 13px;
+	min-width: 58px;
+}
+
+.monitor_medium .monitorLinkIcon {
+	font-size: 20px;
+}
+
+.monitor_medium .monitorLinkIcon {
+	font-size: 20px;
+}
+
+.monitor_device_medium {
+	font-size: 13px;
+	min-width: 58px;
+	padding: 2px;
+}
+
+// Large Classification
+.monitor_large {
+	height: 118px;
+	width: 128px !important;
+}
+
+.monitor_large_title {
+	display: inline-block;
+	text-align: center;
+	width: 128px !important;
+	word-wrap: break-word;
+	overflow: hidden;
+}
+
+.monitor_large_tiles {
+	height: 88px;
+	min-width: 88px;
+}
+
+.monitor_large_tilesadt {
+	height: 102px;
+	width: 128px;
+	justify-content: center;
+}
+
+.monitor_large i, .monitor_large_tiles i, .monitor_large_tilesadt i {
+	font-size: 80px;
+	min-width: 98px;
+}
+
+.monitor_large td {
+	font-size: 15px;
+}
+
+.monitor_large a, .monitor_large_tiles a, .monitor_large_tilesadt a {
+	font-size: 15px;
+	min-width: 98px;
+}
+
+.monitor_large .monitorLinkIcon {
+	font-size: 28px;
+}
+
+.monitor_device_large {
+	font-size: 10px;
+	padding: 2px;
+	min-width: 148px;
+}
+
+// Ex-Large Classification
+.monitor_exlarge {
+	height: 168px;
+	min-width: 128px;
+}
+
+.monitor_exlarge_title {
+	display: inline-block;
+	text-align: center;
+	width: 128px !important;
+	word-wrap: break-word;
+	overflow: hidden;
+}
+
+.monitor_exlarge_tiles {
+	height: 128px;
+	min-width: 128px;
+}
+
+.monitor_exlarge_tilesadt {
+	height: 148px;
+	width: 128px;
+}
+
+.monitor_exlarge i, .monitor_exlarge_tiles i, .monitor_exlarge_tilesadt i {
+	font-size: 120px;
+	min-width: 128px;
+}
+
+.monitor_exlarge td {
+	font-size: 16px;
+}
+
+.monitor_exlarge, .monitor_exlarge .monitorLinkIcon {
+	font-size: 16px;
+}
+
+.monitor_exlarge .monitorLinkIcon {
+	font-size: 38px;
+}
+
+
+.monitor_exlarge a, .monitor_exlarge_tiles a, .monitor_exlarge_tilesadt a {
+	font-size: 16px;
+	min-width: 128px;
+}
+
+.monitor_device_exlarge {
+	font-size: 10px;
+	padding: 2px;
+}
+
+.monitorHover {
+	min-width: 400px;
+	max-width: 1000px;
+}
+
+.monitorHover td:first-child {
+	padding-right: 5px;
+	vertical-align: text-top;
+	white-space: nowrap;
+}
+
+.monitorFilterTable {
+	display: table;
+	margin-left: auto;
+	margin-right: auto;
+	width: 50%;
+}
+
+.monitorFilterRow {
+	display: table-row;
+	margin: auto;
 	width: 100%;
+}
+
+.monitorFilterCell {
+	display: table-cell;
+}
+
+.monitorFilterCell .ui-button, .monitorFilterCell button {
+	margin: 2px ! important;
+}
+
+.monitorFilterCell .ui-selectmenu-button, .monitorFilterCell select {
+	min-width: 150px ! important;
+	max-width: 150px ! important;
+	margin: 2px ! important;
+}
+
+.monitorFilterForm {
+	padding-bottom: 2px;
+	width: 100%;
+}
+
+.monitorFilterText {
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+.deviceAlertBg,
+.deviceDownBg,
+.deviceUnknownBg {
+	color: gray;
+}
+
+.cactiPageBottom {
+	z-index: -1;
+}
+
+.deviceThesholdMuted {
+	color: #F0E68C !important;
+}
+
+.deviceThresholdMutedBg {
+	background-color: #F0E68C !important;
+	color: #161616;
 }
 

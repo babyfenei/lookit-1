@@ -1,0 +1,465 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-09-21 10:27-0400\n"
+"PO-Revision-Date: 2019-03-17 11:07-0400\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ru_RU\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.1\n"
+
+#: maint.php:32
+#, fuzzy
+msgid "Update Time (Now + 1 Hour)"
+msgstr "Время обновления (сейчас + 1 час)"
+
+#: maint.php:33
+#, fuzzy
+msgid "Delete"
+msgstr "Удалить"
+
+#: maint.php:38
+#, fuzzy
+msgid "Associate"
+msgstr "ассоциированный"
+
+#: maint.php:39
+#, fuzzy
+msgid "Disassociate"
+msgstr "отмежеваться"
+
+#: maint.php:43
+#, fuzzy
+msgid "One Time"
+msgstr "Один раз"
+
+#: maint.php:44
+#, fuzzy
+msgid "Recurring"
+msgstr "Возбуждение"
+
+#: maint.php:48
+#, fuzzy
+msgid "Not Defined"
+msgstr "Не Определено"
+
+#: maint.php:49
+#, fuzzy
+msgid "Every Day"
+msgstr "Каждый день"
+
+#: maint.php:50
+#, fuzzy
+msgid "Every Week"
+msgstr "Каждую неделю"
+
+#: maint.php:54 maint.php:57
+#, fuzzy
+msgid "No"
+msgstr "Нет"
+
+#: maint.php:55 maint.php:56
+#, fuzzy
+msgid "Yes"
+msgstr "Да"
+
+#: maint.php:62
+#, fuzzy
+msgid "General"
+msgstr "Общие"
+
+#: maint.php:66 maint.php:865 maint.php:1007
+#, fuzzy
+msgid "Devices"
+msgstr "Устройства"
+
+#: maint.php:70
+#, fuzzy
+msgid "WebSeer"
+msgstr "WebSeer"
+
+#: maint.php:294
+#, fuzzy
+msgid "Click 'Continue' to Update the following Maintenance Schedule(s)."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы обновить следующий(ые) график(ы) "
+"технического обслуживания."
+
+#: maint.php:299 maint.php:308 maint.php:363 maint.php:372 maint.php:428
+#: maint.php:437
+msgid "Cancel"
+msgstr ""
+
+#: maint.php:299 maint.php:308 maint.php:363 maint.php:372 maint.php:428
+#: maint.php:437
+msgid "Continue"
+msgstr ""
+
+#: maint.php:299
+#, fuzzy
+msgid "Update Maintenance Schedule(s)"
+msgstr "Графики технического обслуживания"
+
+#: maint.php:303
+#, fuzzy
+msgid ""
+"Click 'Continue' to Delete the following Maintenance Schedule(s).  Any "
+"Devices(s) Associated with this Schedule will be Disassociated."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы удалить следующий(ые) график(ы) "
+"технического обслуживания.  Любые Устройства, связанные с данным Графиком, "
+"будут отключены."
+
+#: maint.php:308
+#, fuzzy
+msgid "Delete Maintenance Schedule(s)"
+msgstr "Графики технического обслуживания"
+
+#: maint.php:311
+#, fuzzy
+msgid "You must select at least one Maintenance Schedule."
+msgstr "Необходимо выбрать хотя бы один график технического обслуживания."
+
+#: maint.php:312 maint.php:376 maint.php:441
+msgid "Return"
+msgstr ""
+
+#: maint.php:352 maint.php:415
+#, fuzzy
+msgid "Device(s)"
+msgstr "Устройство(ы)"
+
+#: maint.php:358
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to associate the following Device(s) with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы связать следующее устройство "
+"(устройства) с графиком технического обслуживания '<b>%s</b>'."
+
+#: maint.php:363 maint.php:428
+#, fuzzy
+msgid "Associate Maintenance Schedule(s)"
+msgstr "Графики технического обслуживания"
+
+#: maint.php:367
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to disassociate the following Device(s) with the "
+"Maintenance Schedule '<b>%s</b>'."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы разделить следующие устройства с "
+"расписанием технического обслуживания '<b>%s</b>'."
+
+#: maint.php:372 maint.php:437
+#, fuzzy
+msgid "Disassociate Maintenance Schedule(s)"
+msgstr "Графики технического обслуживания"
+
+#: maint.php:375 maint.php:440
+#, fuzzy
+msgid "You must select at least one Device."
+msgstr "Вы должны выбрать хотя бы одно устройство."
+
+#: maint.php:423
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to associate the Device(s) below with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы связать устройство (устройства) ниже с "
+"графиком технического обслуживания \"<b>%s</b>\"."
+
+#: maint.php:432
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to disassociate the Devices(s) below with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Нажмите кнопку \"Продолжить\", чтобы отменить связь между устройствами, "
+"указанными ниже, и графиком технического обслуживания \"<b>%s</b>\"."
+
+#: maint.php:471
+#, fuzzy, php-format
+msgid "General Settings [edit: %s]"
+msgstr "Общие настройки [Изменить: %s]"
+
+#: maint.php:473
+#, fuzzy
+msgid "General Settings [new]"
+msgstr "Общие настройки [новые]"
+
+#: maint.php:521
+#, fuzzy
+msgid "New Maintenance Schedule"
+msgstr "Новый график технического обслуживания"
+
+#: maint.php:533
+#, fuzzy
+msgid "Schedule"
+msgstr "Расписание"
+
+#: maint.php:537
+#, fuzzy
+msgid "Schedule Name"
+msgstr "Название расписания"
+
+#: maint.php:541
+#, fuzzy
+msgid "Provide the Maintenance Schedule a meaningful name"
+msgstr "Предоставьте значимое имя в Графике технического обслуживания."
+
+#: maint.php:545 maint.php:704 maint.php:1230 maint.php:1262
+#, fuzzy
+msgid "Enabled"
+msgstr "Включено"
+
+#: maint.php:548
+#, fuzzy
+msgid "Whether or not this threshold will be checked and alerted upon."
+msgstr "Будет ли этот порог проверяться и предупреждаться об этом или нет."
+
+#: maint.php:552
+#, fuzzy
+msgid "Schedule Type"
+msgstr "Тип Расписания"
+
+#: maint.php:556
+#, fuzzy
+msgid "The type of Threshold that will be monitored."
+msgstr "Тип порога, который будет контролироваться."
+
+#: maint.php:560 maint.php:703
+#, fuzzy
+msgid "Interval"
+msgstr "Интервал"
+
+#: maint.php:564
+#, fuzzy
+msgid "This is the interval in which the start / end time will repeat."
+msgstr "Это интервал, в течение которого время начала/конца будет повторяться."
+
+#: maint.php:568
+#, fuzzy
+msgid "Start Time"
+msgstr "Время начала"
+
+#: maint.php:572
+#, fuzzy
+msgid ""
+"The start date / time for this schedule. Most date / time formats accepted."
+msgstr ""
+"Дата начала / время для этого расписания. Большинство форматов даты/времени "
+"приняты."
+
+#: maint.php:577
+#, fuzzy
+msgid "End Time"
+msgstr "Время окончания"
+
+#: maint.php:582
+#, fuzzy
+msgid ""
+"The end date / time for this schedule. Most date / time formats accepted."
+msgstr ""
+"Дата/время окончания для этого расписания. Большинство форматов даты/времени "
+"приняты."
+
+#: maint.php:631
+msgid "Start Date/Time Selector"
+msgstr ""
+
+#: maint.php:632
+msgid "End Date/Time Selector"
+msgstr ""
+
+#: maint.php:695 setup.php:54 setup.php:58
+#, fuzzy
+msgid "Maintenance Schedules"
+msgstr "Графики технического обслуживания"
+
+#: maint.php:698
+#, fuzzy
+msgid "Name"
+msgstr "Имя"
+
+#: maint.php:699
+#, fuzzy
+msgid "Active"
+msgstr "Активный"
+
+#: maint.php:700 maint.php:843
+#, fuzzy
+msgid "Type"
+msgstr "Тип"
+
+#: maint.php:701
+#, fuzzy
+msgid "Start"
+msgstr "Начало"
+
+#: maint.php:702
+#, fuzzy
+msgid "End"
+msgstr "Конец"
+
+#: maint.php:742 maint.php:1042 maint.php:1259
+#, fuzzy
+msgid "No Schedules"
+msgstr "Нет расписания"
+
+#: maint.php:828
+#, fuzzy, php-format
+msgid "Associated Devices %s"
+msgstr "Связанные устройства %s"
+
+#: maint.php:837 maint.php:1137
+#, fuzzy
+msgid "Search"
+msgstr "Найти"
+
+#: maint.php:847
+#, fuzzy
+msgid "Any"
+msgstr "Любой"
+
+#: maint.php:848
+#, fuzzy
+msgid "None"
+msgstr "Нет"
+
+#: maint.php:869 maint.php:1147
+#, fuzzy
+msgid "Default"
+msgstr "Стандартно"
+
+#: maint.php:883 maint.php:1161
+#, fuzzy
+msgid "Associated"
+msgstr "Связанный"
+
+#: maint.php:887 maint.php:1165
+msgid "Go"
+msgstr ""
+
+#: maint.php:887 maint.php:1165
+msgid "Set/Refresh Filters"
+msgstr ""
+
+#: maint.php:888 maint.php:1166
+msgid "Clear"
+msgstr ""
+
+#: maint.php:888 maint.php:1166
+msgid "Clear Filters"
+msgstr ""
+
+#: maint.php:973 maint.php:1227
+#, fuzzy
+msgid "Description"
+msgstr "Описание"
+
+#: maint.php:977 maint.php:1228
+#, fuzzy
+msgid "ID"
+msgstr "ИД"
+
+#: maint.php:981 maint.php:1229
+#, fuzzy
+msgid "Associated Schedules"
+msgstr "Сопутствующие графики"
+
+#: maint.php:985
+#, fuzzy
+msgid "Graphs"
+msgstr "Графики"
+
+#: maint.php:989
+#, fuzzy
+msgid "Data Sources"
+msgstr "Источники Данных"
+
+#: maint.php:993
+#, fuzzy
+msgid "Thresholds"
+msgstr "Пороги"
+
+#: maint.php:997
+#, fuzzy
+msgid "Status"
+msgstr "Статус"
+
+#: maint.php:1001 maint.php:1231
+#, fuzzy
+msgid "Hostname"
+msgstr "Имя хоста"
+
+#: maint.php:1024 maint.php:1243
+#, fuzzy
+msgid "Current Schedule"
+msgstr "Текущий график"
+
+#: maint.php:1055
+#, fuzzy
+msgid "No Associated Devices Found"
+msgstr "Нет Сопутствующих устройств найдено не было"
+
+#: maint.php:1128
+#, fuzzy, php-format
+msgid "Associated Web URL's %s"
+msgstr "Соответствующие URL-адреса веб-сайтов"
+
+#: maint.php:1143
+#, fuzzy
+msgid "Rules"
+msgstr "Правила"
+
+#: maint.php:1218
+#, fuzzy
+msgid "Lists"
+msgstr "Списки"
+
+#: maint.php:1232
+#, fuzzy
+msgid "URL"
+msgstr "URL"
+
+#: maint.php:1262
+#, fuzzy
+msgid "Disabled"
+msgstr "Выключен"
+
+#: maint.php:1264
+#, fuzzy
+msgid "USING DNS"
+msgstr "ИСПОЛЬЗОВАТЕЛЬНЫЙ DNS"
+
+#: maint.php:1272
+#, fuzzy
+msgid "No Associated WebSeer URL's Found"
+msgstr "URL-адрес ассоциированного WebSeer не найден"
+
+#: setup.php:54
+#, fuzzy
+msgid "Management"
+msgstr "Управление"
+
+#: setup.php:59
+#, fuzzy
+msgid "(edit)"
+msgstr "(Редактировать)"
+
+#: setup.php:60
+#, fuzzy
+msgid "(actions)"
+msgstr "Действия"

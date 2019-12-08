@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -66,10 +66,15 @@ switch (get_request_var('action')) {
 
 function form_save() {
 	if ((isset_request_var('save_component_site')) && (isempty_request_var('add_dq_y'))) {
-		$site_id = api_mactrack_site_save(get_filter_request_var('site_id'), get_nfilter_request_var('site_name'), 
-			get_nfilter_request_var('customer_contact'), get_nfilter_request_var('netops_contact'), 
+		$site_id = api_mactrack_site_save(get_filter_request_var('site_id'), get_nfilter_request_var('site_name'),
+			get_nfilter_request_var('customer_contact'), get_nfilter_request_var('netops_contact'),
 			get_nfilter_request_var('facilities_contact'), get_nfilter_request_var('site_info'));
 
+		if ($site_id) {
+			raise_message(1);
+		} else {
+			raise_message(2);
+		}
 		header('Location: mactrack_sites.php?action=edit&header=false&site_id=' . (empty($site_id) ? get_filter_request_var('site_id') : $site_id));
 	}
 }
@@ -105,15 +110,15 @@ function form_actions() {
 	$site_list = ''; $i = 0;
 
 	/* loop through each of the host templates selected on the previous page and get more info about them */
-	while (list($var,$val) = each($_POST)) {
+	foreach ($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
 			/* ================= input validation ================= */
 			input_validate_input_number($matches[1]);
 			/* ==================================================== */
 
-			$site_info = db_fetch_cell_prepared('SELECT site_name 
-				FROM mac_track_sites 
-				WHERE site_id = ?', 
+			$site_info = db_fetch_cell_prepared('SELECT site_name
+				FROM mac_track_sites
+				WHERE site_id = ?',
 				array($matches[1]));
 
 			$site_list .= '<li>' . $site_info . '</li>';
@@ -228,7 +233,7 @@ function mactrack_site_export() {
 			'"total_macs","total_ips","total_oper_ports",' .
 			'"total_user_ports"');
 
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			foreach ($sites as $site) {
 				array_push($xport_array,'"' . $site['site_name'] . '","' .
 				$site['total_devices'] . '","' .
@@ -245,7 +250,7 @@ function mactrack_site_export() {
 			'"device_name","sum_ips_total","sum_ports_total",' .
 			'"sum_ports_active","sum_ports_trunk","sum_mac_active"');
 
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			foreach ($sites as $site) {
 				array_push($xport_array,'"' . $site['site_name'] . '","' .
 				$site['total_devices'] . '","' .
@@ -273,9 +278,9 @@ function mactrack_site_export() {
 
 function mactrack_site_get_site_records(&$sql_where, $rows, $apply_limits = true) {
 	/* create SQL where clause */
-	$device_type_info = db_fetch_row_prepared('SELECT * 
-		FROM mac_track_device_types 
-		WHERE device_type_id = ?', 
+	$device_type_info = db_fetch_row_prepared('SELECT *
+		FROM mac_track_device_types
+		WHERE device_type_id = ?',
 		array(get_request_var('device_type_id')));
 
 	$sql_where = '';
@@ -291,7 +296,7 @@ function mactrack_site_get_site_records(&$sql_where, $rows, $apply_limits = true
 		}
 	}
 
-	if (sizeof($device_type_info)) {
+	if (cacti_sizeof($device_type_info)) {
 		$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . '(mtd.device_type_id=' . $device_type_info['device_type_id'] . ')';
 	}
 
@@ -307,15 +312,15 @@ function mactrack_site_get_site_records(&$sql_where, $rows, $apply_limits = true
 	}
 
 	if (get_request_var('detail') == 'false') {
-		$query_string = "SELECT mts.site_id, mts.site_name, mts.total_devices, 
-			mts.total_device_errors, mts.total_macs, mts.total_ips, 
+		$query_string = "SELECT mts.site_id, mts.site_name, mts.total_devices,
+			mts.total_device_errors, mts.total_macs, mts.total_ips,
 			mts.total_oper_ports, mts.total_user_ports
 			FROM mac_track_sites AS mts
 			$sql_where
 			$sql_order
 			$sql_limit";
 	} else {
-		$query_string ="SELECT mts.site_id, mts.site_name, 
+		$query_string ="SELECT mts.site_id, mts.site_name,
 			COUNT(mtdt.device_type_id) AS total_devices,
 			mtdt.vendor, mtdt.description,
 			SUM(mtd.ips_total) AS sum_ips_total,
@@ -345,11 +350,9 @@ function mactrack_site_edit() {
 	get_filter_request_var('site_id');
 	/* ==================================================== */
 
-	display_output_messages();
-
 	if (!isempty_request_var('site_id')) {
-		$site = db_fetch_row_prepared('SELECT * 
-			FROM mac_track_sites 
+		$site = db_fetch_row_prepared('SELECT *
+			FROM mac_track_sites
 			WHERE site_id = ?',
 			array(get_request_var('site_id')));
 
@@ -437,7 +440,7 @@ function mactrack_site() {
 		html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'));
 
 		$i = 0;
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			foreach ($sites as $site) {
 				form_alternate_row('line' . $site['site_id'], true);
 				form_selectable_cell(filter_value($site['site_name'], get_request_var('filter'), 'mactrack_sites.php?action=edit&site_id=' . $site['site_id']), $site['site_id']);
@@ -456,7 +459,7 @@ function mactrack_site() {
 
 		html_end_box(false);
 
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			print $nav;
 		}
 	} else {
@@ -482,7 +485,7 @@ function mactrack_site() {
 
 		html_header_sort($display_text, get_request_var('sort_column'), get_request_var('sort_direction'));
 
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			foreach ($sites as $site) {
 				form_alternate_row();
 					?>
@@ -506,7 +509,7 @@ function mactrack_site() {
 
 		html_end_box(false);
 
-		if (sizeof($sites)) {
+		if (cacti_sizeof($sites)) {
 			print $nav;
 		}
 	}

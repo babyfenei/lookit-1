@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -31,8 +31,8 @@ include_once('./lib/time.php');
 include_once('./lib/html_tree.php');
 include_once('./lib/api_graph.php');
 include_once('./lib/api_tree.php');
+include_once('./lib/utility.php');
 include_once('./lib/api_data_source.php');
-include_once('./plugins/cycle/functions.php');
 include_once('./plugins/cycle/functions.php');
 
 set_default_action();
@@ -92,7 +92,7 @@ function cycle_graphs() {
 	$max_cols  = $cols;
 	$col_count = 1;
 
-	if (sizeof($graphs)) {
+	if ($graphs !== null && $graphs !== false && sizeof($graphs)) {
 		foreach($graphs as $graph) {
 			if ($col_count == 1)
 				$out .= '<tr>';
@@ -100,8 +100,10 @@ function cycle_graphs() {
 			$out .= '<td align="center" class="graphholder">'
 				. "<a href='../../graph.php?local_graph_id=" . $graph['graph_id'] . "&rra_id=all'>"
 				. "<img class='cycle_image' "
-				. "src='../../graph_image.php?image_format=png&disable_cache=true&local_graph_id=" . $graph['graph_id'] . "&rra_id=0&graph_start=" . $timespan['begin_now']
-				. "&graph_end=" . time() . "&graph_width=" . $width . "&graph_height=" . $height . ($legend == '' || $legend=='false' ? "&graph_nolegend=true" : "") . "'>"
+				. "src='../../graph_image.php?image_format=png&disable_cache=true&local_graph_id="
+				. $graph['graph_id'] . "&rra_id=0&graph_start=" . $timespan['begin_now']
+				. "&graph_end=" . time() . "&graph_width=" . $width . "&graph_height=" . $height
+				. ($legend == '' || $legend=='false' ? "&graph_nolegend=true" : "") . "'>"
 				. "</a></td>";
 
 			ob_start();
@@ -143,6 +145,10 @@ function cycle() {
 
 	general_header();
 
+	global $config;
+
+	print "<script type='text/javascript' src='" . $config['url_path'] . "plugins/cycle/cycle.js'></script>\n";
+
 	$tree_list = get_allowed_trees();
 	$legend    = get_request_var('legend');
 	$tree_id   = get_request_var('tree_id');
@@ -181,7 +187,7 @@ function cycle() {
 			<tr>
 				<td>
 					<script type='text/javascript'>
-						var rtime=<?php echo get_request_var('cycle_delay')*1000;?>;
+						var rtime=<?php echo get_request_var('delay')*1000;?>;
 					</script>
 					<select id='timespan' title='<?php print __esc('Graph Display Timespan', 'cycle');?>'>
 						<?php
@@ -371,7 +377,7 @@ function cycle() {
 
 			$('input, label, button').tooltip();
 
-			clearInterval(timerID)
+			stopTime();
 			startTime();
 			newGraph();
 		});

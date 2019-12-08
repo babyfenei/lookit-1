@@ -1,0 +1,460 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-09-21 10:27-0400\n"
+"PO-Revision-Date: 2019-03-17 11:08-0400\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: sv_SE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.1\n"
+
+#: maint.php:32
+#, fuzzy
+msgid "Update Time (Now + 1 Hour)"
+msgstr "Uppdateringstid (nu + 1 timme)"
+
+#: maint.php:33
+#, fuzzy
+msgid "Delete"
+msgstr "Ta bort"
+
+#: maint.php:38
+#, fuzzy
+msgid "Associate"
+msgstr "Associera"
+
+#: maint.php:39
+#, fuzzy
+msgid "Disassociate"
+msgstr "ta avstånd"
+
+#: maint.php:43
+#, fuzzy
+msgid "One Time"
+msgstr "Engångs"
+
+#: maint.php:44
+#, fuzzy
+msgid "Recurring"
+msgstr "Återkommande"
+
+#: maint.php:48
+#, fuzzy
+msgid "Not Defined"
+msgstr "Inte definierad"
+
+#: maint.php:49
+#, fuzzy
+msgid "Every Day"
+msgstr "Varje dag"
+
+#: maint.php:50
+#, fuzzy
+msgid "Every Week"
+msgstr "Varje vecka"
+
+#: maint.php:54 maint.php:57
+#, fuzzy
+msgid "No"
+msgstr "Nej"
+
+#: maint.php:55 maint.php:56
+#, fuzzy
+msgid "Yes"
+msgstr "Ja"
+
+#: maint.php:62
+#, fuzzy
+msgid "General"
+msgstr "Allmän"
+
+#: maint.php:66 maint.php:865 maint.php:1007
+#, fuzzy
+msgid "Devices"
+msgstr "Enheter"
+
+#: maint.php:70
+#, fuzzy
+msgid "WebSeer"
+msgstr "WebSeer"
+
+#: maint.php:294
+#, fuzzy
+msgid "Click 'Continue' to Update the following Maintenance Schedule(s)."
+msgstr "Klicka på \"Fortsätt\" för att uppdatera följande underhållsplaner."
+
+#: maint.php:299 maint.php:308 maint.php:363 maint.php:372 maint.php:428
+#: maint.php:437
+msgid "Cancel"
+msgstr ""
+
+#: maint.php:299 maint.php:308 maint.php:363 maint.php:372 maint.php:428
+#: maint.php:437
+msgid "Continue"
+msgstr ""
+
+#: maint.php:299
+#, fuzzy
+msgid "Update Maintenance Schedule(s)"
+msgstr "Underhållscheman"
+
+#: maint.php:303
+#, fuzzy
+msgid ""
+"Click 'Continue' to Delete the following Maintenance Schedule(s).  Any "
+"Devices(s) Associated with this Schedule will be Disassociated."
+msgstr ""
+"Klicka på \"Fortsätt\" för att ta bort följande underhållsplaner. Eventuella "
+"enheter som är associerade med detta schema kommer att vara disassociated."
+
+#: maint.php:308
+#, fuzzy
+msgid "Delete Maintenance Schedule(s)"
+msgstr "Underhållscheman"
+
+#: maint.php:311
+#, fuzzy
+msgid "You must select at least one Maintenance Schedule."
+msgstr "Du måste välja minst ett underhållsschema."
+
+#: maint.php:312 maint.php:376 maint.php:441
+msgid "Return"
+msgstr ""
+
+#: maint.php:352 maint.php:415
+#, fuzzy
+msgid "Device(s)"
+msgstr "Anordning (ar)"
+
+#: maint.php:358
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to associate the following Device(s) with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Klicka på \"Fortsätt\" för att associera följande enhet (er) med "
+"underhållsplanen ' <b> %s</b> '."
+
+#: maint.php:363 maint.php:428
+#, fuzzy
+msgid "Associate Maintenance Schedule(s)"
+msgstr "Underhållscheman"
+
+#: maint.php:367
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to disassociate the following Device(s) with the "
+"Maintenance Schedule '<b>%s</b>'."
+msgstr ""
+"Klicka på \"Fortsätt\" för att avbryta följande enhet (er) med "
+"underhållsplanen ' <b> %s</b> '."
+
+#: maint.php:372 maint.php:437
+#, fuzzy
+msgid "Disassociate Maintenance Schedule(s)"
+msgstr "Underhållscheman"
+
+#: maint.php:375 maint.php:440
+#, fuzzy
+msgid "You must select at least one Device."
+msgstr "Du måste välja minst en enhet."
+
+#: maint.php:423
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to associate the Device(s) below with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Klicka på Fortsätt för att associera enheten / enheterna nedan med "
+"underhållsplanen ' <b> %s</b> '."
+
+#: maint.php:432
+#, fuzzy, php-format
+msgid ""
+"Click 'Continue' to disassociate the Devices(s) below with the Maintenance "
+"Schedule '<b>%s</b>'."
+msgstr ""
+"Klicka på \"Fortsätt\" för att avbryta enheterna nedan med underhållsplanen "
+"' <b> %s</b> '."
+
+#: maint.php:471
+#, fuzzy, php-format
+msgid "General Settings [edit: %s]"
+msgstr "Allmänna inställningar [redigera: %s]"
+
+#: maint.php:473
+#, fuzzy
+msgid "General Settings [new]"
+msgstr "Allmänna inställningar [ny]"
+
+#: maint.php:521
+#, fuzzy
+msgid "New Maintenance Schedule"
+msgstr "Ny underhållsplan"
+
+#: maint.php:533
+#, fuzzy
+msgid "Schedule"
+msgstr "Schema"
+
+#: maint.php:537
+#, fuzzy
+msgid "Schedule Name"
+msgstr "Schema namn"
+
+#: maint.php:541
+#, fuzzy
+msgid "Provide the Maintenance Schedule a meaningful name"
+msgstr "Ge underhållsplanen ett meningsfullt namn"
+
+#: maint.php:545 maint.php:704 maint.php:1230 maint.php:1262
+#, fuzzy
+msgid "Enabled"
+msgstr "Aktiverad"
+
+#: maint.php:548
+#, fuzzy
+msgid "Whether or not this threshold will be checked and alerted upon."
+msgstr "Huruvida denna tröskel kommer att kontrolleras och varnas om."
+
+#: maint.php:552
+#, fuzzy
+msgid "Schedule Type"
+msgstr "Schema typ"
+
+#: maint.php:556
+#, fuzzy
+msgid "The type of Threshold that will be monitored."
+msgstr "Den typ av tröskel som kommer att övervakas."
+
+#: maint.php:560 maint.php:703
+#, fuzzy
+msgid "Interval"
+msgstr "Intervall"
+
+#: maint.php:564
+#, fuzzy
+msgid "This is the interval in which the start / end time will repeat."
+msgstr "Detta är det intervall i vilket start / sluttid kommer att upprepas."
+
+#: maint.php:568
+#, fuzzy
+msgid "Start Time"
+msgstr "Starttid"
+
+#: maint.php:572
+#, fuzzy
+msgid ""
+"The start date / time for this schedule. Most date / time formats accepted."
+msgstr ""
+"Startdatum / tid för detta schema. De flesta datum / tidsformat accepteras."
+
+#: maint.php:577
+#, fuzzy
+msgid "End Time"
+msgstr "Sluttid"
+
+#: maint.php:582
+#, fuzzy
+msgid ""
+"The end date / time for this schedule. Most date / time formats accepted."
+msgstr ""
+"Slutdatum / tid för detta schema. De flesta datum / tidsformat accepteras."
+
+#: maint.php:631
+msgid "Start Date/Time Selector"
+msgstr ""
+
+#: maint.php:632
+msgid "End Date/Time Selector"
+msgstr ""
+
+#: maint.php:695 setup.php:54 setup.php:58
+#, fuzzy
+msgid "Maintenance Schedules"
+msgstr "Underhållscheman"
+
+#: maint.php:698
+#, fuzzy
+msgid "Name"
+msgstr "Namn"
+
+#: maint.php:699
+#, fuzzy
+msgid "Active"
+msgstr "Aktiv"
+
+#: maint.php:700 maint.php:843
+#, fuzzy
+msgid "Type"
+msgstr "Typ"
+
+#: maint.php:701
+#, fuzzy
+msgid "Start"
+msgstr "Start"
+
+#: maint.php:702
+#, fuzzy
+msgid "End"
+msgstr "Slut"
+
+#: maint.php:742 maint.php:1042 maint.php:1259
+#, fuzzy
+msgid "No Schedules"
+msgstr "Inga scheman"
+
+#: maint.php:828
+#, fuzzy, php-format
+msgid "Associated Devices %s"
+msgstr "Associerade enheter %s"
+
+#: maint.php:837 maint.php:1137
+#, fuzzy
+msgid "Search"
+msgstr "Sök"
+
+#: maint.php:847
+#, fuzzy
+msgid "Any"
+msgstr "Vilken som helst"
+
+#: maint.php:848
+#, fuzzy
+msgid "None"
+msgstr "Ingen"
+
+#: maint.php:869 maint.php:1147
+#, fuzzy
+msgid "Default"
+msgstr "Standard"
+
+#: maint.php:883 maint.php:1161
+#, fuzzy
+msgid "Associated"
+msgstr "Associerad"
+
+#: maint.php:887 maint.php:1165
+msgid "Go"
+msgstr ""
+
+#: maint.php:887 maint.php:1165
+msgid "Set/Refresh Filters"
+msgstr ""
+
+#: maint.php:888 maint.php:1166
+msgid "Clear"
+msgstr ""
+
+#: maint.php:888 maint.php:1166
+msgid "Clear Filters"
+msgstr ""
+
+#: maint.php:973 maint.php:1227
+#, fuzzy
+msgid "Description"
+msgstr "Beskrivning"
+
+#: maint.php:977 maint.php:1228
+#, fuzzy
+msgid "ID"
+msgstr "ID"
+
+#: maint.php:981 maint.php:1229
+#, fuzzy
+msgid "Associated Schedules"
+msgstr "Associerade scheman"
+
+#: maint.php:985
+#, fuzzy
+msgid "Graphs"
+msgstr "Grafer"
+
+#: maint.php:989
+#, fuzzy
+msgid "Data Sources"
+msgstr "Datakällor"
+
+#: maint.php:993
+#, fuzzy
+msgid "Thresholds"
+msgstr "trösklar"
+
+#: maint.php:997
+#, fuzzy
+msgid "Status"
+msgstr "Status"
+
+#: maint.php:1001 maint.php:1231
+#, fuzzy
+msgid "Hostname"
+msgstr "Värdnamn"
+
+#: maint.php:1024 maint.php:1243
+#, fuzzy
+msgid "Current Schedule"
+msgstr "Nuvarande schema"
+
+#: maint.php:1055
+#, fuzzy
+msgid "No Associated Devices Found"
+msgstr "Inga associerade enheter hittades"
+
+#: maint.php:1128
+#, fuzzy, php-format
+msgid "Associated Web URL's %s"
+msgstr "Associerad webbadress %s"
+
+#: maint.php:1143
+#, fuzzy
+msgid "Rules"
+msgstr "Regler"
+
+#: maint.php:1218
+#, fuzzy
+msgid "Lists"
+msgstr "Listor"
+
+#: maint.php:1232
+#, fuzzy
+msgid "URL"
+msgstr "URL"
+
+#: maint.php:1262
+#, fuzzy
+msgid "Disabled"
+msgstr "Inaktiverad"
+
+#: maint.php:1264
+#, fuzzy
+msgid "USING DNS"
+msgstr "ANVÄNDA DNS"
+
+#: maint.php:1272
+#, fuzzy
+msgid "No Associated WebSeer URL's Found"
+msgstr "Ingen associerad WebSeer-URL hittades"
+
+#: setup.php:54
+#, fuzzy
+msgid "Management"
+msgstr "Hantering"
+
+#: setup.php:59
+#, fuzzy
+msgid "(edit)"
+msgstr "(Redigera)"
+
+#: setup.php:60
+#, fuzzy
+msgid "(actions)"
+msgstr "Åtgärder"

@@ -1,8 +1,7 @@
 <?php
 /*
- ex: set tabstop=4 shiftwidth=4 autoindent:
  +-------------------------------------------------------------------------+
- | Copyright (C) 2006-2017 The Cacti Group                                 |
+ | Copyright (C) 2006-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -23,7 +22,7 @@
  +-------------------------------------------------------------------------+
 */
 
-function thold_draw_navigation_text ($nav) {
+function thold_draw_navigation_text($nav) {
 	global $config;
 
 	$nav['thold.php:'] = array('title' => __('Thresholds', 'thold'), 'mapping' => 'index.php:', 'url' => 'thold.php', 'level' => '1');
@@ -55,12 +54,13 @@ function thold_draw_navigation_text ($nav) {
 	return $nav;
 }
 
-function thold_config_insert () {
+function thold_config_insert() {
 	global $menu;
 
 	$menu[__('Management')]['plugins/thold/notify_lists.php'] = __('Notification Lists', 'thold');
 	$menu[__('Management')]['plugins/thold/thold.php'] = __('Thresholds', 'thold');
 	$menu[__('Templates')]['plugins/thold/thold_templates.php'] = __('Threshold', 'thold');
+
 	if (isset_request_var('thold_vrule')) {
 		if (get_nfilter_request_var('thold_vrule') == 'on') {
 			$_SESSION['sess_config_array']['thold_draw_vrules'] = 'on';
@@ -70,22 +70,44 @@ function thold_config_insert () {
 		}
 	}
 
-	define('ST_RESTORAL', 0); // Restoral
-	define('ST_TRIGGERA', 1); // Trigger Alert
-	define('ST_NOTIFYRA', 2); // Notify Alert Retrigger
-	define('ST_NOTIFYWA', 3); // Notify Warning
-	define('ST_NOTIFYAL', 4); // Notify Alert
-	define('ST_NOTIFYRS', 5); // Notify Restoral
-	define('ST_TRIGGERW', 6); // Trigger Warning
-	define('ST_NOTIFYAW', 7); // Notify Restoral to Warning
+	if (!defined('ST_RESTORAL')) {
+		define('ST_RESTORAL', 0); // Restoral
+		define('ST_TRIGGERA', 1); // Trigger Alert
+		define('ST_NOTIFYRA', 2); // Notify Alert Retrigger
+		define('ST_NOTIFYWA', 3); // Notify Warning
+		define('ST_NOTIFYAL', 4); // Notify Alert
+		define('ST_NOTIFYRS', 5); // Notify Restoral
+		define('ST_TRIGGERW', 6); // Trigger Warning
+		define('ST_NOTIFYAW', 7); // Notify Restoral to Warning
+	}
 
-	define('STAT_HI',     2);
-	define('STAT_LO',     1);
-	define('STAT_NORMAL', 0);
+	if (!defined('MESSAGE_LEVEL_NONE')) {
+		define('MESSAGE_LEVEL_NONE', 0);
+		define('MESSAGE_LEVEL_INFO', 1);
+		define('MESSAGE_LEVEL_WARN', 2);
+		define('MESSAGE_LEVEL_ERROR', 3);
+		define('MESSAGE_LEVEL_CSRF', 4);
+	}
+
+	if (!defined('STAT_HI')) {
+		define('STAT_HI', 2);
+		define('STAT_LO', 1);
+		define('STAT_NORMAL', 0);
+	}
+
+	if (!defined('THOLD_SEVERITY_NORMAL')) {
+		define('THOLD_SEVERITY_NORMAL', 0);
+		define('THOLD_SEVERITY_ALERT', 1);
+		define('THOLD_SEVERITY_WARNING', 2);
+		define('THOLD_SEVERITY_NOTICE', 3);
+		define('THOLD_SEVERITY_ACKREQ', 4);
+		define('THOLD_SEVERITY_DISABLED', 5);
+		define('THOLD_SEVERITY_BASELINE', 6);
+	}
 }
 
-function thold_config_arrays () {
-	global $messages;
+function thold_config_arrays() {
+	global $config, $messages;
 
 	$messages['thold_save'] = array(
 		'message' => __('A template with that Data Source already exists!', 'thold'),
@@ -98,20 +120,33 @@ function thold_config_arrays () {
 			'type' => 'info'
 		);
 	}
+
+	$realm_array = array(
+		__('Configure Thresholds', 'thold'),
+		__('Configure Threshold Templates', 'thold'),
+		__('Manage Notification Lists', 'thold'),
+		__('View Thresholds', 'thold')
+	);
+
+	kill_session_var('thold_message');
 }
 
-function thold_config_form () {
+function thold_config_form() {
 	global $fields_host_edit;
+
 	$fields_host_edit2 = $fields_host_edit;
 	$fields_host_edit3 = array();
+
 	foreach ($fields_host_edit2 as $f => $a) {
 		$fields_host_edit3[$f] = $a;
+
 		if ($f == 'disabled') {
 			$fields_host_edit3['thold_mail_spacer'] = array(
 				'friendly_name' => __('Device Up/Down Notification Settings', 'thold'),
 				'method' => 'spacer',
 				'collapsible' => true
 			);
+
 			$fields_host_edit3['thold_send_email'] = array(
 				'friendly_name' => __('Threshold Up/Down Email Notification', 'thold'),
 				'method' => 'drop_array',
@@ -127,6 +162,7 @@ function thold_config_form () {
 				'default' => '0',
 				'form_id' => false
 			);
+
 			$fields_host_edit3['thold_host_email'] = array(
 				'friendly_name' => __('Notification List', 'thold'),
 				'description' => __('Additional Email address, separated by commas for multiple Emails.', 'thold'),
@@ -138,48 +174,29 @@ function thold_config_form () {
 			);
 		}
 	}
+
 	$fields_host_edit = $fields_host_edit3;
 }
 
-function thold_config_settings () {
-	global $tabs, $settings, $item_rows, $config;
+function thold_config_settings() {
+	global $tabs, $settings, $item_rows, $config, $syslog_facil_array, $syslog_priority_array;
 
 	if (get_current_page() != 'settings.php') return;
 
-	include('./plugins/thold/includes/arrays.php');
-	include_once('./plugins/thold/thold_functions.php');
+	include($config['base_path'] . '/plugins/thold/includes/arrays.php');
+	include_once($config['base_path'] . '/plugins/thold/setup.php');
+	include_once($config['base_path'] . '/plugins/thold/thold_functions.php');
+	include_once($config['base_path'] . '/plugins/thold/includes/database.php');
 
-	if ($config['cacti_server_os'] == 'unix') {
-		$syslog_facil_array = array(
-			LOG_AUTH     => 'Auth',
-			LOG_AUTHPRIV => 'Auth Private',
-			LOG_CRON     => 'Cron',
-			LOG_DAEMON   => 'Daemon',
-			LOG_KERN     => 'Kernel',
-			LOG_LOCAL0   => 'Local 0',
-			LOG_LOCAL1   => 'Local 1',
-			LOG_LOCAL2   => 'Local 2',
-			LOG_LOCAL3   => 'Local 3',
-			LOG_LOCAL4   => 'Local 4',
-			LOG_LOCAL5   => 'Local 5',
-			LOG_LOCAL6   => 'Local 6',
-			LOG_LOCAL7   => 'Local 7',
-			LOG_LPR      => 'LPR',
-			LOG_MAIL     => 'Mail',
-			LOG_NEWS     => 'News',
-			LOG_SYSLOG   => 'Syslog',
-			LOG_USER     => 'User',
-			LOG_UUCP     => 'UUCP'
-		);
+	/* check to see if there is an upgrade required */
+	plugin_thold_upgrade();
 
-		$default_facility = LOG_DAEMON;
-	} else {
-		$syslog_facil_array = array(LOG_USER => 'User');
+	$tabs['alerts'] = __('Alerting/Thold', 'thold');
 
-		$default_facility = LOG_USER;
+	if (isset($settings['alerts'])) {
+		$temp = $settings['alerts'];
 	}
 
-	$tabs['alerts'] = __('Thresholds', 'thold');
 	$settings['alerts'] = array(
 		'general_header' => array(
 			'friendly_name' => __('General', 'thold'),
@@ -203,8 +220,38 @@ function thold_config_settings () {
 			'method' => 'checkbox',
 			'default' => ''
 		),
+		'notify_templated' => array(
+			'friendly_name' => __('Threshold Notification Templated', 'thold'),
+			'description' => __('If checked, when creating at Threshold Template, its Notification Settings will, by default be owned by the Threshold Template.', 'thold'),
+			'method' => 'checkbox'
+		),
+		'thold_enable_scripts' => array(
+			'friendly_name' => __('Enable Command Execution', 'thold'),
+			'description' => __('Checking this box will enable the ability to run commands on Threshold breach and restoral events.', 'thold'),
+			'method' => 'checkbox',
+			'default' => ''
+		),
+		'thold_enable_per_thold_body' => array(
+			'friendly_name' => __('Enable Per Thold Notification', 'thold'),
+			'description' => __('Checking this box will enable the ability to maintain custom Email bodies for Thresholds.', 'thold'),
+			'method' => 'checkbox',
+			'default' => ''
+		),
 		'thold_filter_default' => array(
-			'friendly_name' => __('Default Status', 'thold'),
+			'friendly_name' => __('Default Management Status', 'thold'),
+			'description' => __('Default Threshold management filter status.', 'thold'),
+			'method' => 'drop_array',
+			'array' => array(
+				'-1' => __('Any', 'thold'),
+				'0'  => __('Disabled', 'thold'),
+				'2'  => __('Enabled', 'thold'),
+				'1'  => __('Breached', 'thold'),
+				'3'  => __('Triggered', 'thold')
+			),
+			'default' => -1
+		),
+		'thold_monitor_default' => array(
+			'friendly_name' => __('Default Monitor Status', 'thold'),
 			'description' => __('Default Threshold Tab filter status.', 'thold'),
 			'method' => 'drop_array',
 			'array' => array(
@@ -214,7 +261,7 @@ function thold_config_settings () {
 				'1'  => __('Breached', 'thold'),
 				'3'  => __('Triggered', 'thold')
 			),
-			'default' => 20
+			'default' => -1
 		),
 		'thold_empty_if_speed_default' => array(
 			'friendly_name' => __('Empty ifHighSpeed Default', 'thold'),
@@ -332,33 +379,24 @@ function thold_config_settings () {
 			'default' => 20
 		),
 		'syslog_header' => array(
-			'friendly_name' => __('Syslog Settings', 'thold'),
+			'friendly_name' => __('Default Syslog Settings', 'thold'),
 			'method' => 'spacer',
 		),
 		'alert_syslog' => array(
-			'friendly_name' => __('Syslog Support', 'thold'),
-			'description' => __('These messages will be sent to your local syslog. If you would like these sent to a remote box, you must setup your local syslog to do so.', 'thold'),
+			'friendly_name' => __('Syslog Enabled', 'thold'),
+			'description' => __('If checked, when creating a new Threshold, by default new Threshold events will be sent to your local syslog.  This setting is a preset.  Threshold settings dictate actual syslog control.', 'thold'),
 			'method' => 'checkbox'
 		),
-		'thold_syslog_level' => array(
-			'friendly_name' => __('Syslog Level', 'thold'),
-			'description' => __('This is the priority level that your syslog messages will be sent as.', 'thold'),
+		'thold_syslog_priority' => array(
+			'friendly_name' => __('Default Priority/Level', 'thold'),
+			'description' => __('This is the default Priority/Level that Thold will use to send syslog messages.  This setting is a preset.  Threshold settings dictate actual syslog control.', 'thold'),
 			'method' => 'drop_array',
-			'default' => LOG_WARNING,
-			'array' => array(
-				LOG_EMERG   => __('Emergency', 'thold'),
-				LOG_ALERT   => __('Alert', 'thold'),
-				LOG_CRIT    => __('Critical', 'thold'),
-				LOG_ERR     => __('Error', 'thold'),
-				LOG_WARNING => __('Warning', 'thold'),
-				LOG_NOTICE  => __('Notice', 'thold'),
-				LOG_INFO    => __('Info', 'thold'),
-				LOG_DEBUG   => __('Debug', 'thold')
-			),
+			'default' => $default_priority,
+			'array' => $syslog_priority_array,
 		),
 		'thold_syslog_facility' => array(
-			'friendly_name' => __('Syslog Facility', 'thold'),
-			'description' => __('This is the facility level that your syslog messages will be sent as.', 'thold'),
+			'friendly_name' => __('Default Facility', 'thold'),
+			'description' => __('This is the default Facility that Thold will use to send syslog messages.  This setting is a preset.  Threshold settings dictate actual syslog control.', 'thold'),
 			'method' => 'drop_array',
 			'default' => $default_facility,
 			'array' => $syslog_facil_array,
@@ -402,6 +440,30 @@ function thold_config_settings () {
 			'method' => 'checkbox',
 			'default' => ''
 		),
+		'thold_send_text_only' => array(
+			'friendly_name' => __('Send Alerts as Text', 'thold'),
+			'description' => __('If checked, this will cause all Alerts to be sent as plain text Emails with no graph.  The default is HTML Emails with the graph embedded in the Email.', 'thold'),
+			'method' => 'checkbox',
+			'default' => ''
+		),
+		'thold_from_email' => array(
+			'friendly_name' => __('From Email Address', 'thold'),
+			'description' => __('This is the Email address that the Threshold will appear from.', 'thold'),
+			'method' => 'textbox',
+			'default' => read_config_option('settings_from_email'),
+			'max_length' => 255,
+		),
+		'thold_from_name' => array(
+			'friendly_name' => __('From Name', 'thold'),
+			'description' => __('This is the actual name that the Threshold will appear from.', 'thold'),
+			'method' => 'textbox',
+			'default' => read_config_option('settings_from_name'),
+			'max_length' => 255,
+		),
+		'thold_device_header' => array(
+			'friendly_name' => __('Device Notification Options', 'thold'),
+			'method' => 'spacer',
+		),
 		'alert_deadnotify' => array(
 			'friendly_name' => __('Dead Device Notifications', 'thold'),
 			'description' => __('Enable Dead/Recovering host notification', 'thold'),
@@ -425,12 +487,12 @@ function thold_config_settings () {
 		),
 		'thold_down_text' => array(
 			'friendly_name' => __('Down Device Message', 'thold'),
-			'description' => __('This is the message that will be displayed as the message body of all UP / Down Device Messages (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060HOSTNAME&#062  &#060DESCRIPTION&#062 &#060UPTIME&#062  &#060UPTIMETEXT&#062  &#060DOWNTIME&#062 &#060MESSAGE&#062 &#060SUBJECT&#062 &#060DOWN/UP&#062 &#060SNMP_HOSTNAME&#062 &#060SNMP_LOCATION&#062 &#060SNMP_CONTACT&#062 &#060SNMP_SYSTEM&#062 &#060LAST_FAIL&#062 &#060AVAILABILITY&#062 &#060TOT_POLL&#062 &#060FAIL_POLL&#062 &#060CUR_TIME&#062 &#060AVG_TIME&#062 &#060NOTES&#062', 'thold'),
+			'description' => __('This is the message that will be displayed as the message body of all UP / Down Device Messages (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060HOSTNAME&#062 &#060DESCRIPTION&#062 &#060UPTIME&#062 &#060UPTIMETEXT&#062 &#060DOWNTIME&#062 &#060TIME&#062 &#060DATE&#062 &#060DATE_RFC822&#062 &#060BREACHED_ITEMS&#062 &#060MESSAGE&#062 &#060SUBJECT&#062 &#060DOWN/UP&#062 &#060SNMP_HOSTNAME&#062 &#060SNMP_LOCATION&#062 &#060SNMP_CONTACT&#062 &#060SNMP_SYSTEM&#062 &#060LAST_FAIL&#062 &#060AVAILABILITY&#062 &#060TOT_POLL&#062 &#060FAIL_POLL&#062 &#060CUR_TIME&#062 &#060AVG_TIME&#062 &#060NOTES&#062', 'thold'),
 			'method' => 'textarea',
 			'class' => 'textAreaNotes',
 			'textarea_rows' => '7',
 			'textarea_cols' => '80',
-			'default' => __('System Error : <DESCRIPTION> (<HOSTNAME>) is <DOWN/UP><br>Reason: <MESSAGE><br><br>Average system response: <AVG_TIME> ms<br>System availability: <AVAILABILITY><br>Total Checks Since Clear: <TOT_POLL><br>Total Failed Checks: <FAIL_POLL><br>Last Date Checked DOWN : <LAST_FAIL><br>Device Previously UP for: <DOWNTIME><br>NOTE: <NOTES>', 'thold'),
+			'default' => __('System Error : <DESCRIPTION> (<HOSTNAME>) is <DOWN/UP><br>Reason: <MESSAGE><br><br>Average system response: <AVG_TIME> ms<br>System availability: <AVAILABILITY><br>Total Checks Since Clear: <TOT_POLL><br>Total Failed Checks: <FAIL_POLL><br>Last Date Checked DOWN : <LAST_FAIL><br>Device Previously UP for: <DOWNTIME><br>NOTES: <NOTES><br>Device NOTES: <DNOTES>', 'thold'),
 		),
 		'thold_up_subject' => array(
 			'friendly_name' => __('Recovering Device Subject', 'thold'),
@@ -442,30 +504,20 @@ function thold_config_settings () {
 		),
 		'thold_up_text' => array(
 			'friendly_name' => __('Recovering Device Message', 'thold'),
-			'description' => __('This is the message that will be displayed as the message body of all UP / Down Device Messages (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060HOSTNAME&#062  &#060DESCRIPTION&#062 &#060UPTIME&#062  &#060UPTIMETEXT&#062  &#060DOWNTIME&#062 &#060MESSAGE&#062 &#060SUBJECT&#062 &#060DOWN/UP&#062 &#060SNMP_HOSTNAME&#062 &#060SNMP_LOCATION&#062 &#060SNMP_CONTACT&#062 &#060SNMP_SYSTEM&#062 &#060LAST_FAIL&#062 &#060AVAILABILITY&#062 &#060TOT_POLL&#062 &#060FAIL_POLL&#062 &#060CUR_TIME&#062 &#060AVG_TIME&#062 &#060NOTES&#062', 'thold'),
+			'description' => __('This is the message that will be displayed as the message body of all UP / Down Device Messages (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060HOSTNAME&#062 &#060DESCRIPTION&#062 &#060UPTIME&#062 &#060UPTIMETEXT&#062 &#060DOWNTIME&#062 &#060TIME&#062 &#060DATE&#062 &#060DATE_RFC822&#062 &#060BREACHED_ITEMS&#062  &#060MESSAGE&#062 &#060SUBJECT&#062 &#060DOWN/UP&#062 &#060SNMP_HOSTNAME&#062 &#060SNMP_LOCATION&#062 &#060SNMP_CONTACT&#062 &#060SNMP_SYSTEM&#062 &#060LAST_FAIL&#062 &#060AVAILABILITY&#062 &#060TOT_POLL&#062 &#060FAIL_POLL&#062 &#060CUR_TIME&#062 &#060AVG_TIME&#062 &#060NOTES&#062', 'thold'),
 			'method' => 'textarea',
 			'class' => 'textAreaNotes',
 			'textarea_rows' => '7',
 			'textarea_cols' => '80',
-			'default' => __('<br>System <DESCRIPTION> (<HOSTNAME>) status: <DOWN/UP><br><br>Current ping response: <CUR_TIME> ms<br>Average system response: <AVG_TIME> ms<br>System availability: <AVAILABILITY><br>Total Checks Since Clear: <TOT_POLL><br>Total Failed Checks: <FAIL_POLL><br>Last Date Checked UP: <LAST_FAIL><br>Device Previously DOWN for: <DOWNTIME><br><br>Snmp Info:<br>Name - <SNMP_HOSTNAME><br>Location - <SNMP_LOCATION><br>Uptime - <UPTIMETEXT> (<UPTIME> ms)<br>System - <SNMP_SYSTEM><br><br>NOTE: <NOTES>', 'thold'),
+			'default' => __('<br>System <DESCRIPTION> (<HOSTNAME>) status: <DOWN/UP><br><br>Current ping response: <CUR_TIME> ms<br>Average system response: <AVG_TIME> ms<br>System availability: <AVAILABILITY><br>Total Checks Since Clear: <TOT_POLL><br>Total Failed Checks: <FAIL_POLL><br>Last Date Checked UP: <LAST_FAIL><br>Device Previously DOWN for: <DOWNTIME><br><br>Snmp Info:<br>Name - <SNMP_HOSTNAME><br>Location - <SNMP_LOCATION><br>Uptime - <UPTIMETEXT> (<UPTIME> ms)<br>System - <SNMP_SYSTEM><br><br>NOTE: <NOTES><br>Device Notes: <DNOTES>', 'thold'),
 		),
-		'thold_from_email' => array(
-			'friendly_name' => __('From Email Address', 'thold'),
-			'description' => __('This is the Email address that the Threshold will appear from.', 'thold'),
-			'method' => 'textbox',
-			'default' => read_config_option('settings_from_email'),
-			'max_length' => 255,
-		),
-		'thold_from_name' => array(
-			'friendly_name' => __('From Name', 'thold'),
-			'description' => __('This is the actual name that the Threshold will appear from.', 'thold'),
-			'method' => 'textbox',
-			'default' => read_config_option('settings_from_name'),
-			'max_length' => 255,
+		'thold_notify_header' => array(
+			'friendly_name' => __('Alert/Warning Message Defaults', 'thold'),
+			'method' => 'spacer',
 		),
 		'thold_alert_text' => array(
 			'friendly_name' => __('Threshold Alert Message', 'thold'),
-			'description' => __('This is the message that will be displayed at the top of all Threshold Alerts (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060DESCRIPTION&#062 &#060HOSTNAME&#062 &#060TIME&#062 &#060URL&#062 &#060GRAPHID&#062 &#060CURRENTVALUE&#062 &#060THRESHOLDNAME&#062  &#060DSNAME&#062 &#060SUBJECT&#062 &#060GRAPH&#062 &#60NOTES&#62', 'thold'),
+			'description' => __('This is the message that will be displayed at the top of all Threshold Alerts (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060DESCRIPTION&#062 &#060HOSTNAME&#062 &#060TIME&#062 &#060DATE&#062 &#060DATE_RFC822&#062 &#060BREACHED_ITEMS&#062  &#060URL&#062 &#060GRAPHID&#062 &#060CURRENTVALUE&#062 &#060THRESHOLDNAME&#062  &#060DSNAME&#062 &#060SUBJECT&#062 &#060GRAPH&#062 &#60NOTES&#62 &#060DNOTES&#062', 'thold'),
 			'method' => 'textarea',
 			'class' => 'textAreaNotes',
 			'textarea_rows' => '5',
@@ -474,19 +526,17 @@ function thold_config_settings () {
 		),
 		'thold_warning_text' => array(
 			'friendly_name' => __('Threshold Warning Message', 'thold'),
-			'description' => __('This is the message that will be displayed at the top of all Threshold warnings (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060DESCRIPTION&#062 &#060HOSTNAME&#062 &#060TIME&#062 &#060URL&#062 &#060GRAPHID&#062 &#060CURRENTVALUE&#062 &#060THRESHOLDNAME&#062  &#060DSNAME&#062 &#060SUBJECT&#062 &#060GRAPH&#062 &#60NOTES&#62', 'thold'),
+			'description' => __('This is the message that will be displayed at the top of all Threshold warnings (255 Char MAX).  HTML is allowed, but will be removed for text only Emails.  There are several descriptors that may be used.<br>&#060DESCRIPTION&#062 &#060HOSTNAME&#062 &#060TIME&#062 &#060DATE&#062 &#060DATE_RFC822&#062 &#060BREACHED_ITEMS&#062  &#060URL&#062 &#060GRAPHID&#062 &#060CURRENTVALUE&#062 &#060THRESHOLDNAME&#062  &#060DSNAME&#062 &#060SUBJECT&#062 &#060GRAPH&#062 &#60NOTES&#62 &#060DNOTES&#062', 'thold'),
 			'method' => 'textarea',
 			'class' => 'textAreaNotes',
 			'textarea_rows' => '5',
 			'textarea_cols' => '80',
-			'default' => __('A warning has been issued that requires your attention. <br><br><strong>Device</strong>: <DESCRIPTION> (<HOSTNAME>)<br><strong>URL</strong>: <URL><br><strong>Message</strong>: <SUBJECT><br><br><GRAPH>', 'thold'),
+			'default' => __('A Warning has been issued that requires your attention. <br><br><strong>Device</strong>: <DESCRIPTION> (<HOSTNAME>)<br><strong>URL</strong>: <URL><br><strong>Message</strong>: <SUBJECT><br><br><GRAPH>', 'thold'),
 		),
-		'thold_send_text_only' => array(
-			'friendly_name' => __('Send Alerts as Text', 'thold'),
-			'description' => __('If checked, this will cause all Alerts to be sent as plain text Emails with no graph.  The default is HTML Emails with the graph embedded in the Email.', 'thold'),
-			'method' => 'checkbox',
-			'default' => ''
-		)
 	);
+
+	if (isset($temp)) {
+		$settings['alerts'] = array_merge($settings['alerts'], $temp);
+	}
 }
 

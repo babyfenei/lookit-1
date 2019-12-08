@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -21,8 +21,8 @@
  | http://www.cacti.net/                                                   |
  +-------------------------------------------------------------------------+
 */
-chdir('../../');
 
+chdir('../../');
 include('./include/auth.php');
 include_once('./plugins/mactrack/lib/mactrack_functions.php');
 
@@ -61,12 +61,18 @@ default:
 
 function form_save() {
 	if ((isset_request_var('save_component_macw')) && (isempty_request_var('add_dq_y'))) {
-		$mac_id = api_mactrack_macw_save(get_nfilter_request_var('mac_id'), 
-			get_nfilter_request_var('mac_address'), get_nfilter_request_var('name'), 
+		$mac_id = api_mactrack_macw_save(get_nfilter_request_var('mac_id'),
+			get_nfilter_request_var('mac_address'), get_nfilter_request_var('name'),
 			get_nfilter_request_var('ticket_number'), get_nfilter_request_var('description'),
 			get_nfilter_request_var('notify_schedule'), get_nfilter_request_var('email_addresses'));
 
-		header('Location: mactrack_macwatch.php?action=edit&id=' . (empty($mac_id) ? get_request_var('mac_id') : $mac_id));
+		if ($mac_id) {
+			raise_message(1);
+		} else {
+			raise_message(2);
+		}
+
+		header('Location: mactrack_macwatch.php?action=edit&header=false&id=' . (empty($mac_id) ? get_request_var('mac_id') : $mac_id));
 	}
 }
 
@@ -101,15 +107,15 @@ function form_actions() {
 	$macw_list = ''; $i = 0;
 
 	/* loop through each of the mac watch items selected on the previous page and get more info about them */
-	while (list($var,$val) = each($_POST)) {
+	foreach ($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
 			/* ================= input validation ================= */
 			input_validate_input_number($matches[1]);
 			/* ==================================================== */
 
-			$macw_info = db_fetch_cell_prepared('SELECT name 
-				FROM mac_track_macwatch 
-				WHERE mac_id = ?', 
+			$macw_info = db_fetch_cell_prepared('SELECT name
+				FROM mac_track_macwatch
+				WHERE mac_id = ?',
 				array($matches[1]));
 
 			$macw_list .= '<li>' . $macw_info . '</li>';
@@ -121,14 +127,15 @@ function form_actions() {
 
 	top_header();
 
-	html_start_box($macw_actions[get_request_var('drp_action')], '60%', '', '3', 'center', '');
-
 	form_start('mactrack_macwatch.php');
 
+	html_start_box($macw_actions[get_request_var('drp_action')], '60%', '', '3', 'center', '');
+
 	if (!isset($macw_array)) {
-		print "<tr><td class='even'><span class='textError'>" . __('You must select at least one watched Mac to delete.', 'mactrack') . "</span></td></tr>\n";
-		$save_html = "";
-	}else{
+		raise_message(40);
+		header('Location: mactrack_macwatch.php');
+		exit;
+	} else {
 		$save_html = "<input type='submit' name='save' value='" . __esc('Continue', 'mactrack') . "'>";
 
 		if (get_request_var('drp_action') == '1') { /* delete */
@@ -142,7 +149,7 @@ function form_actions() {
 	}
 
 	print "<tr>
-		<td colspan='2' align='right' class='saveRow'>
+		<td align='right' class='saveRow'>
 			<input type='hidden' name='action' value='actions'>
 			<input type='hidden' name='selected_items' value='" . (isset($macw_array) ? serialize($macw_array) : '') . "'>
 			<input type='hidden' name='drp_action' value='" . get_request_var('drp_action') . "'>" . (strlen($save_html) ? "
@@ -173,7 +180,7 @@ function api_mactrack_macw_save($mac_id, $mac_address, $name, $ticket_number, $d
 
 		if ($mac_id) {
 			raise_message(1);
-		}else{
+		} else {
 			raise_message(2);
 		}
 	}
@@ -189,7 +196,7 @@ function api_mactrack_macw_remove($mac_id) {
     MacWatch Functions
    --------------------- */
 
-function mactrack_macw_get_macw_records(&$sql_where, $rows, $apply_limits = TRUE) {
+function mactrack_macw_get_macw_records(&$sql_where, $rows, $apply_limits = true) {
 	$sql_where = '';
 
 	/* form the 'where' clause for our main sql query */
@@ -203,7 +210,7 @@ function mactrack_macw_get_macw_records(&$sql_where, $rows, $apply_limits = TRUE
 	$sql_order = get_order_string();
 	if ($apply_limits) {
 		$sql_limit = ' LIMIT ' . ($rows*(get_request_var('page')-1)) . ',' . $rows;
-	}else{
+	} else {
 		$sql_limit = '';
 	}
 
@@ -223,16 +230,14 @@ function mactrack_macw_edit() {
 	get_filter_request_var('mac_id');
 	/* ==================================================== */
 
-	display_output_messages();
-
 	if (!isempty_request_var('mac_id')) {
-		$mac_record = db_fetch_row_prepared('SELECT * 
-			FROM mac_track_macwatch 
-			WHERE mac_id = ?', 
+		$mac_record = db_fetch_row_prepared('SELECT *
+			FROM mac_track_macwatch
+			WHERE mac_id = ?',
 			array(get_request_var('mac_id')));
 
 		$header_label = __('Device Tracking MacWatch [edit: %s]', $mac_record['name'], 'mactrack');
-	}else{
+	} else {
 		$header_label = __('Device Tracking MacWatch [new]', 'mactrack');
 	}
 
@@ -291,7 +296,7 @@ function mactrack_macw() {
 		$rows = read_config_option('num_rows_table');
 	}elseif (get_request_var('rows') == -2) {
 		$rows = 999999;
-	}else{
+	} else {
 		$rows = get_request_var('rows');
 	}
 
@@ -306,12 +311,26 @@ function mactrack_macw() {
 	$total_rows = db_fetch_cell("SELECT count(*) FROM mac_track_macwatch $sql_where");
 
 	$display_text = array(
-		'name'            => array(__('Watch Name', 'mactrack'), 'ASC'),
-		'mac_address'     => array(__('Mac Address', 'mactrack'), 'ASC'),
-		'ticket_number'   => array(__('Ticket Number', 'mactrack'), 'ASC'),
-		'nosort'          => array(__('Watch Description', 'mactrack'), 'ASC'),
-		'date_first_seen' => array(__('First Seen', 'mactrack'), 'ASC'),
-		'date_last_seen'  => array(__('Last Seen', 'mactrack'), 'ASC')
+		'name' => array(
+			'display' => __('Watch Name', 'mactrack'),
+			'sort' => 'ASC'
+		),
+		'mac_address' => array(
+			'display' => __('Mac Address', 'mactrack'),
+			'sort' => 'ASC'
+		),
+		'ticket_number' => array(
+			'display' => __('Ticket Number', 'mactrack'),
+			'sort' => 'ASC'
+		),
+		'date_first_seen' => array(
+			'display' => __('First Seen', 'mactrack'),
+			'sort' => 'ASC'
+		),
+		'date_last_seen'  => array(
+			'display' => __('Last Seen', 'mactrack'),
+			'sort' => 'ASC'
+		)
 	);
 
 	$columns = sizeof($display_text) + 1;
@@ -327,25 +346,26 @@ function mactrack_macw() {
 	html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'));
 
 	$i = 0;
-	if (sizeof($macw)) {
+	if (cacti_sizeof($macw)) {
 		foreach ($macw as $mac) {
 			form_alternate_row('line' . $mac['mac_id'], true);
+
 			form_selectable_cell(filter_value($mac['name'], get_request_var('filter'), 'mactrack_macwatch.php?action=edit&mac_id=' . $mac['mac_id']), $mac['mac_id']);
 			form_selectable_cell(filter_value($mac['mac_address'], get_request_var('filter')), $mac['mac_id']);
 			form_selectable_cell(filter_value($mac['ticket_number'], get_request_var('filter')), $mac['mac_id']);
-			form_selectable_cell(filter_value($mac['description'], get_request_var('filter')), $mac['mac_id']);
 			form_selectable_cell($mac['date_first_seen'] == '0000-00-00 00:00:00' ? __('N/A', 'mactrack') : $mac['date_first_seen'], $mac['mac_id']);
 			form_selectable_cell($mac['date_last_seen'] == '0000-00-00 00:00:00' ? __('N/A', 'mactrack') : $mac['date_last_seen'], $mac['mac_id']);
-			form_selectable_cell($mac['name'], $mac['mac_id']);
+			form_checkbox_cell($mac['name'], $mac['mac_id']);
+
 			form_end_row();
 		}
-	}else{
+	} else {
 		print '<tr><td colspan="' . $columns . '"><em>' . __('No Device Tracking Watched Macs Found', 'mactrack') . '</em></td></tr>';
 	}
 
 	html_end_box(false);
 
-	if (sizeof($macw)) {
+	if (cacti_sizeof($macw)) {
 		print $nav;
 	}
 
@@ -377,7 +397,7 @@ function mactrack_macw_filter() {
 						<select id='rows' onChange='applyFilter()'>
 							<option value='-1'<?php if (get_request_var('rows') == '-1') {?> selected<?php }?>><?php print __('Default', 'mactrack');?></option>
 							<?php
-							if (sizeof($item_rows)) {
+							if (cacti_sizeof($item_rows)) {
 								foreach ($item_rows as $key => $value) {
 									print "<option value='" . $key . "'"; if (get_request_var('rows') == $key) { print ' selected'; } print '>' . $value . '</option>';
 								}

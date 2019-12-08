@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2008-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -103,12 +103,16 @@ $device_edit = array(
 		'value' => '|arg1:name|',
 		'max_length' => '64',
 	),
-	'folder' => array(
-		'method' => 'textbox',
-		'friendly_name' => __('Directory', 'flowview'),
-		'description' => __('Directory that this devices flows are in.  This directory must be in the Flow Directory path.  Do not put the full path here.  Also, not that if you change the path, all the predefined filer setup to to use it will have to be resaved.', 'flowview'),
-		'value' => '|arg1:folder|',
-		'max_length' => '64',
+	'cmethod' => array(
+		'friendly_name' => __('Collection Medhod', 'flowview'),
+		'description' => __('There are two support collection methods, the first utilizes the legacy flow-tools binaries and the second leverages Cacti\'s own PHP based flow stream server.', 'flowview'),
+		'value' => '|arg1:cmethod|',
+		'method' => 'drop_array',
+		'default' => '0',
+		'array' => array(
+			0 => __('Cacti', 'flowview'),
+			1 => __('Legacy', 'flowview')
+		)
 	),
 	'allowfrom' => array(
 		'method' => 'textbox',
@@ -127,6 +131,17 @@ $device_edit = array(
 		'default' => '2055',
 		'max_length' => '5',
 		'size' => '30'
+	),
+	'spacer1' => array(
+		'method' => 'spacer',
+		'friendly_name' => __('Flow-Tools Required Fields', 'flowview'),
+	),
+	'folder' => array(
+		'method' => 'textbox',
+		'friendly_name' => __('Directory', 'flowview'),
+		'description' => __('Directory that this devices flows are in.  This directory must be in the Flow Directory path.  Do not put the full path here.  Also, not that if you change the path, all the predefined filer setup to to use it will have to be resaved.', 'flowview'),
+		'value' => '|arg1:folder|',
+		'max_length' => '64',
 	),
 	'nesting' => array(
 		'friendly_name' => __('Nesting', 'flowview'),
@@ -182,14 +197,12 @@ switch (get_request_var('action')) {
 		save_devices ();
 		break;
 	case 'edit':
-		general_header();
-		display_tabs ();
+		top_header();
 		edit_devices();
 		bottom_footer();
 		break;
 	default:
-		general_header();
-		display_tabs ();
+		top_header();
 		show_devices ();
 		bottom_footer();
 		break;
@@ -219,7 +232,7 @@ function actions_devices () {
 	$i = 0;
 
 	/* loop through each of the devices selected on the previous page and get more info about them */
-	while (list($var,$val) = each($_POST)) {
+	foreach($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
 			/* ================= input validation ================= */
 			input_validate_input_number($matches[1]);
@@ -288,6 +301,7 @@ function save_devices () {
 	}
 
 	$save['name']        = get_nfilter_request_var('name');
+	$save['cmethod']     = get_nfilter_request_var('cmethod');
 	$save['folder']      = get_nfilter_request_var('folder');
 	$save['allowfrom']   = get_nfilter_request_var('allowfrom');
 	$save['port']        = get_nfilter_request_var('port');
@@ -324,7 +338,7 @@ function edit_devices () {
 		$header_label = __('Device [new]', 'flowview');
 	}
 
-	form_start('flowview_devices.php', 'chk');
+	form_start('flowview_devices.php', 'flowview');
 
 	html_start_box($header_label, '100%', '', '3', 'center', '');
 
@@ -337,6 +351,38 @@ function edit_devices () {
 	html_end_box();
 
 	form_save_button('flowview_devices.php?tab=listeners');
+
+	?>
+	<script type='text/javascript'>
+	$(function() {
+		$('#cmethod').change(function() {
+			changeMethod();
+		});
+
+		changeMethod();
+	});
+
+	function changeMethod() {
+		if ($('#cmethod').val() == 0) {
+			$('#row_spacer1').hide();
+			$('#row_folder').hide();
+			$('#row_nesting').hide();
+			$('#row_version').hide();
+			$('#row_compression').hide();
+			$('#row_rotation').hide();
+			$('#row_expire').hide();
+		} else {
+			$('#row_spacer1').show();
+			$('#row_folder').show();
+			$('#row_nesting').show();
+			$('#row_version').show();
+			$('#row_compression').show();
+			$('#row_rotation').show();
+			$('#row_expire').show();
+		}
+	}
+	</script>
+	<?php
 }
 
 function show_devices () {
@@ -350,10 +396,9 @@ function show_devices () {
 			'default' => '1'
 			),
 		'filter' => array(
-			'filter' => FILTER_CALLBACK,
+			'filter' => FILTER_DEFAULT,
 			'pageset' => true,
-			'default' => '',
-			'options' => array('options' => 'sanitize_search_string')
+			'default' => ''
 			),
 		'sort_column' => array(
 			'filter' => FILTER_CALLBACK,
@@ -370,7 +415,7 @@ function show_devices () {
 	validate_store_request_vars($filters, 'sess_fvd');
 	/* ================= input validation ================= */
 
-	$sql_where = (get_request_var('filter') != '' ? "name LIKE '%" . get_request_var('filter') . "%'":'');
+	$sql_where = (get_request_var('filter') != '' ? 'WHERE name LIKE ' . db_qstr('%' . get_request_var('filter') . '%'):'');
 	$rows      = read_config_option('num_rows_table');
 
 	$sql_order = get_order_string();
@@ -392,13 +437,13 @@ function show_devices () {
 	<tr class='even'>
 		<td>
 		<form id='listeners' action='flowview_devices.php'>
-			<table class='fitlerTable'>
+			<table class='filterTable'>
 				<tr>
 					<td>
 						<?php print __('Search', 'flowview');?>
 					</td>
 					<td>
-						<input type='text' id='filter' size='40' value='<?php print htmlspecialchars(get_request_var('filter'));?>'>
+						<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
 					</td>
 					<td>
 						<input id='refresh' type='submit' value='<?php print __esc('Go', 'flowview');?>' title='<?php print __esc('Set/Refresh Filters', 'flowview');?>'>
@@ -448,10 +493,11 @@ function show_devices () {
 
 	$display_array = array(
 		'name'        => array(__('Name', 'flowview'), 'ASC'),
-		'folder'      => array(__('Directory', 'flowview'), 'ASC'),
-		'nexting'     => array(__('Nesting', 'flowview'), 'ASC'),
+		'cmethod'     => array(__('Method', 'flowview'), 'ASC'),
 		'allowfrom'   => array(__('Allowed From', 'flowview'), 'ASC'),
 		'port'        => array(__('Port', 'flowview'), 'ASC'),
+		'folder'      => array(__('Directory', 'flowview'), 'ASC'),
+		'nesting'     => array(__('Nesting', 'flowview'), 'ASC'),
 		'version'     => array(__('Version', 'flowview'), 'ASC'),
 		'compression' => array(__('Compression', 'flowview'), 'ASC'),
 		'rotation'    => array(__('Rotation', 'flowview'), 'ASC'),
@@ -464,10 +510,11 @@ function show_devices () {
 		foreach ($result as $row) {
 			form_alternate_row('line' . $row['id'], true);
 			form_selectable_cell('<a class="linkEditMain" href="flowview_devices.php?&tab=listeners&action=edit&id=' . $row['id'] . '">' . $row['name'] . '</a>', $row['id']);
-			form_selectable_cell($row['folder'], $row['id']);
-			form_selectable_cell($nesting_arr[$row['nesting']], $row['id']);
+			form_selectable_cell($row['cmethod'] == 0 ? __('Cacti', 'flowview'):__('Legacy', 'flowview'), $row['id']);
 			form_selectable_cell($row['allowfrom'], $row['id']);
 			form_selectable_cell($row['port'], $row['id']);
+			form_selectable_cell($row['folder'], $row['id']);
+			form_selectable_cell($nesting_arr[$row['nesting']], $row['id']);
 			form_selectable_cell($version_arr[$row['version']], $row['id']);
 			form_selectable_cell($row['compression'], $row['id']);
 			form_selectable_cell($rotation_arr[$row['rotation']], $row['id']);

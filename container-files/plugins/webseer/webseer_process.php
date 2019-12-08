@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2010-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -13,7 +13,7 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
- | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ | Cacti: The Complete RRDtool-based Graphing Solution                     |
  +-------------------------------------------------------------------------+
  | This code is designed, written, and maintained by the Cacti Group. See  |
  | about.php and/or the AUTHORS file for specific developer information.   |
@@ -23,13 +23,6 @@
 */
 
 /* we are not talking to the browser */
-$no_http_headers = true;
-
-/* do NOT run this script through a web browser */
-if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
-	die('<br><strong>This script is only meant to run at the command line.</strong>');
-}
-
 $dir = dirname(__FILE__);
 chdir($dir);
 
@@ -37,21 +30,10 @@ if (strpos($dir, 'plugins') !== false) {
 	chdir('../../');
 }
 
-include('./include/global.php');
-include_once($config['base_path'] . '/plugins/webseer/functions.php');
+require('./include/cli_check.php');
+include_once($config['base_path'] . '/plugins/webseer/includes/functions.php');
 
 ini_set('max_execution_time', '21');
-
-// Define the debug function if it does not exst
-if (!function_exists('debug')) {
-	function debug($message) {
-		global $debug;
-
-		if ($debug) {
-			print 'DEBUG: ' . trim($message) . "\n";
-		}
-	}
-}
 
 /* process calling arguments */
 $parms = $_SERVER['argv'];
@@ -59,11 +41,11 @@ array_shift($parms);
 
 global $debug;
 
-$debug  = true;
+$debug  = false;
 $url_id = 0;
 $poller_interval = read_config_option('poller_interval');
 
-if (sizeof($parms)) {
+if (cacti_sizeof($parms)) {
 	foreach($parms as $parameter) {
 		if (strpos($parameter, '=')) {
 			list($arg, $value) = explode('=', $parameter);
@@ -103,17 +85,20 @@ if (empty($url_id)) {
 	exit(1);
 }
 
+plugin_webseer_check_debug();
+
 $url = db_fetch_row_prepared('SELECT *
 	FROM plugin_webseer_urls
 	WHERE enabled = "on"
 	AND id = ?',
 	array($url_id));
 
-if (!sizeof($url)) {
+if (!cacti_sizeof($url)) {
 	echo "ERROR: URL is not Found\n";
 	exit(1);
 }
 
+$url['debug_type'] = 'Url';
 register_startup($url_id);
 
 if ($url['url'] != '') {
@@ -121,13 +106,12 @@ if ($url['url'] != '') {
 	$x = 0;
 
 	while ($x < 3) {
-		debug('Service Check Number ' . $x);
+		plugin_webseer_debug('Service Check Number ' . $x, $url);
 
 		switch ($url['type']) {
 			case 'http':
 			case 'https':
-				$cc = new cURL();
-				$cc->host = $url;
+				$cc = new cURL(true, 'cookies.txt', $url['compression'], '', $url);
 
 				if ($url['proxy_server'] > 0) {
 					$proxy = db_fetch_row_prepared('SELECT *
@@ -135,7 +119,7 @@ if ($url['url'] != '') {
 						WHERE id = ?',
 						array($url['proxy_server']));
 
-					if (sizeof($proxy)) {
+					if (cacti_sizeof($proxy)) {
 						$cc->proxy_hostname = $proxy['hostname'];
 						if ($url['type'] == 'http') {
 							$cc->proxy_port     = $proxy['http_port'];
@@ -190,18 +174,18 @@ if ($url['url'] != '') {
 		AND url_id = ?',
 		array($t, $url['id']));
 
-	debug('pi:' . $pi . ', t:' . $t . ' (' . date('Y-m-d H:i:s', $t) . '), lc:' . $lc . ' (' . date('Y-m-d H:i:s', $lc) . '), ts:' . $ts . ', tf:' . $tf);
-	debug('failures:'. $url['failures'] . ', triggered:' . $url['triggered']);
+	plugin_webseer_debug('pi:' . $pi . ', t:' . $t . ' (' . date('Y-m-d H:i:s', $t) . '), lc:' . $lc . ' (' . date('Y-m-d H:i:s', $lc) . '), ts:' . $ts . ', tf:' . $tf, $url);
+	plugin_webseer_debug('failures:'. $url['failures'] . ', triggered:' . $url['triggered'], $url);
 
-	if (strtotime($url['lastcheck']) > 0 && (($url['result'] != $results['result']) || $url['failures'] > 0 || $url['triggered'] == 1)) {
-		debug('Checking for trigger');
+	if (strtotime($url['lastcheck']) > 0 && (($url['result'] != '' && $url['result'] != $results['result']) || $url['failures'] > 0 || $url['triggered'] == 1)) {
+		plugin_webseer_debug('Checking for trigger', $url);
 
 		$sendemail = false;
 
 		if ($results['result'] == 0) {
 			$url['failures'] = $url['failures'] + 1;
 //			//////////if ($url['failures'] > $url['downtrigger'] && $url['triggered'] == 0) {
-			if ($url['failures'] >= $tf && $url['triggered'] == 0) {
+			if ($url['failures'] >= ($url['downtrigger'] * 60)/$poller_interval && $url['triggered'] == 0) {
 				$sendemail = true;
 				$url['triggered'] = 1;
 			}
@@ -214,33 +198,37 @@ if ($url['url'] != '') {
 			}
 		}
 
-		if ($sendemail) {
-			debug('Time to send email to admins');
+		db_execute_prepared("INSERT INTO plugin_webseer_urls_log
+			(url_id, lastcheck, compression, result, http_code, error,
+			total_time, namelookup_time, connect_time, redirect_time,
+			redirect_count, size_download, speed_download)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			array($url['id'], date('Y-m-d H:i:s', $results['time']),
+				$results['options']['compression'], $results['result'],
+				$results['options']['http_code'], $results['error'],
+				$results['options']['total_time'], $results['options']['namelookup_time'],
+				$results['options']['connect_time'], $results['options']['redirect_time'],
+				$results['options']['redirect_count'], $results['options']['size_download'],
+				$results['options']['speed_download']
+			)
+		);
 
-			db_execute_prepared("INSERT INTO plugin_webseer_url_log
-				(url_id, lastcheck, result, http_code, error,
-				total_time, namelookup_time, connect_time, redirect_time,
-				redirect_count, size_download, speed_download)
-				VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-				array($url['id'], date('Y-m-d H:i:s', $results['time']), $results['result'],
-					$results['options']['http_code'], $results['error'],
-					$results['options']['total_time'], $results['options']['namelookup_time'],
-					$results['options']['connect_time'], $results['options']['redirect_time'],
-					$results['options']['redirect_count'], $results['options']['size_download'],
-					$results['options']['speed_download']
-				)
-			);
+		if ($sendemail) {
+			plugin_webseer_debug('Time to send email to admins', $url);
 
 			if (plugin_webseer_amimaster ()) {
-				plugin_webseer_get_users($results, $url, '');
-				plugin_webseer_get_users($results, $url, 'text');
+				if ($url['notify_format'] == WEBSEER_FORMAT_PLAIN) {
+					plugin_webseer_get_users($results, $url, 'text');
+				} else {
+					plugin_webseer_get_users($results, $url, '');
+				}
 			}
 		}
 	}else{
-		debug('Not checking for trigger');
+		plugin_webseer_debug('Not checking for trigger', $url);
 	}
 
-	debug('Updating Statistics');
+	plugin_webseer_debug('Updating Statistics', $url);
 
 	db_execute_prepared('UPDATE plugin_webseer_urls SET result = ?, triggered = ?, failures = ?,
 		lastcheck = ?, error = ?, http_code = ?, total_time = ?, namelookup_time = ?,
@@ -294,8 +282,9 @@ register_shutdown($url_id);
 
 /* purge old entries from the log */
 
-db_execute('DELETE FROM plugin_webseer_servers_log
-	WHERE UNIX_TIMESTAMP(lastcheck) < ' . (time() - (86400 * 90)));
+db_execute_prepared('DELETE FROM plugin_webseer_servers_log
+	WHERE lastcheck < FROM_UNIXTIME(?)',
+	array(time() - (86400 * 90)));
 
 /* exit */
 
@@ -316,36 +305,21 @@ function register_shutdown($url_id) {
 function plugin_webseer_get_users($results, $url, $type) {
 	global $httperrors;
 
-	if ($type == 'text') {
-		$users = db_fetch_assoc("SELECT data
+	$users = '';
+	if ($url['notify_accounts'] != '') {
+		$users = db_fetch_cell("SELECT GROUP_CONCAT(DISTINCT data) AS emails
 			FROM plugin_webseer_contacts
-			WHERE `type` = 'text'
-			AND  (id = " . ($url['notify_accounts'] != '' ? implode(' OR id = ', explode(',', $url['notify_accounts'])) . ')' : '0)'));
-	} else {
-		$users = db_fetch_assoc("SELECT data
-			FROM plugin_webseer_contacts
-			WHERE (`type` = 'email' OR `type` = 'external')
-			AND (id = " . ($url['notify_accounts'] != '' ? implode(' OR id = ', explode(',', $url['notify_accounts'])) . ')' : '0)'));
+			WHERE id IN (" . $url['notify_accounts'] . ")");
 	}
 
-	if (!sizeof($users) && isset($url['notify_extra']) && $url['notify_extra'] == '') {
+	if ($users == '' && isset($url['notify_extra']) && $url['notify_extra'] == '') {
 		cacti_log('ERROR: No users to send WEBSEER Notification for ' . $url['display_name'], false, 'WEBSEER');
 		return;
 	}
 
-	$to = '';
-	$u  = array();
-
-	if (sizeof($users)) {
-		foreach ($users as $user) {
-			$u[] = $user['data'];
-		}
-
-		$to = implode(',', $u);
-	}
-
+	$to = $users;
 	if ($url['notify_extra'] != '') {
-		$to .= ($to != '' ? ',':'') . $url['notify_extra'];
+		$to .= ($to != '' ? ', ':'') . $url['notify_extra'];
 	}
 
 	if ($type == 'text') {
@@ -456,7 +430,12 @@ function plugin_webseer_send_email($to, $subject, $message) {
 		$from    = $from_email;
 	}
 
-	$v = get_cacti_version();
+	if (defined('CACTI_VERSION')) {
+		$v = CACTI_VERSION;
+	} else {
+		$v = get_cacti_version();
+	}
+
 	$headers['User-Agent'] = 'Cacti-WebSeer-v' . $v;
 
 	$message_text = strip_tags($message);

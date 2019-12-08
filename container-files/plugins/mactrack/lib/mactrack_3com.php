@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -13,8 +13,14 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
+ | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ +-------------------------------------------------------------------------+
+ | This code is designed, written, and maintained by the Cacti Group. See  |
+ | about.php and/or the AUTHORS file for specific developer information.   |
+ +-------------------------------------------------------------------------+
+ | http://www.cacti.net/                                                   |
+ +-------------------------------------------------------------------------+
 */
-
 
 /* register this functions scanning functions */
 if (!isset($mactrack_scanning_functions)) { $mactrack_scanning_functions = array(); }
@@ -33,7 +39,7 @@ function complete_3com_ifName(&$device, &$ifIndexes) {
 	foreach($ifIndexes as $ifidx ) {
 		if ($ifidx["ifName"] != "") {
 			return;
-		}else{
+		} else {
 			break;
 		}
 	}
@@ -44,13 +50,13 @@ function complete_3com_ifName(&$device, &$ifIndexes) {
 	$replacement2 = 'Port${2}/${1}';
 	$replacement3 = 'Port${2}/${1}';
 
-	
+
 	$local_graph_id = db_fetch_assoc("SELECT local_graph_id FROM mac_track_interface_graphs WHERE device_id=".$device['device_id']);
 	sort($local_graph_id);
 	// Get ifDescr and Format it
 	$i=0;
 	$device_descr_array = xform_standard_indexed_data(".1.3.6.1.2.1.2.2.1.2",$device);
-	if (sizeof($device_descr_array)) {
+	if (cacti_sizeof($device_descr_array)) {
 	foreach($device_descr_array as $key => $ifd ) {
 		if($ifIndexes[$key]["ifName"] == "" ){
 			$ifdesc = $device_descr_array[$key] ;
@@ -83,11 +89,11 @@ function get_3Com_dot1dTpFdbEntry_ports($site, &$device, $lowPort = 0, $highPort
 	$ifIndexes = xform_standard_indexed_data(".1.3.6.1.2.1.2.2.1.1", $device);
 	mactrack_debug("ifIndexes data collection complete");
 
-	$ifInterfaces = build_InterfacesTable($device, $ifIndexes, TRUE, FALSE);
+	$ifInterfaces = build_InterfacesTable($device, $ifIndexes, true, false);
 
 	complete_3com_ifName($device, $ifInterfaces);
-	
-	get_3Com_base_dot1dTpFdbEntry_ports($site, $device, $ifInterfaces, "", TRUE, $lowPort, $highPort);
+
+	get_3Com_base_dot1dTpFdbEntry_ports($site, $device, $ifInterfaces, "", true, $lowPort, $highPort);
 
 	return $device;
 }
@@ -96,7 +102,7 @@ function get_3Com_dot1dTpFdbEntry_ports($site, &$device, $lowPort = 0, $highPort
 /* same as get_base_dot1dTpFdbEntry_ports -
    but add iftype 117 gbit ethernet.
 */
-function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = TRUE, $lowPort = 1, $highPort = 9999) {
+function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = true, $lowPort = 1, $highPort = 9999) {
 	global $debug, $scan_date;
 	mactrack_debug("Start get_3Com_base_dot1dTpFdbEntry_ports");
 	/* initialize variables */
@@ -131,8 +137,8 @@ function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $s
 		}
 		$i++;
 	}
-	
-	
+
+
 	if ($store_to_db) {
 		print("INFO: HOST: " . $device["hostname"] . ", TYPE: " . substr($device["snmp_sysDescr"],0,40) . ", TOTAL PORTS: " . $ports_total . ", OPER PORTS: " . $ports_active);
 		if ($debug) {
@@ -179,18 +185,18 @@ function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $s
 		foreach ($port_key_array as $port_key) {
 			/* map bridge port to interface port and check type */
 			if ($port_key["port_number"] > 0) {
-				if (sizeof($bridgePortIfIndexes) != 0) {
+				if (cacti_sizeof($bridgePortIfIndexes) != 0) {
 					/* some hubs do not always return a port number in the bridge table.
 					   test for it by isset and substiture the port number from the ifTable
 					   if it isnt in the bridge table
 					*/
 					if (isset($bridgePortIfIndexes[$port_key["port_number"]])) {
 						$brPortIfIndex = @$bridgePortIfIndexes[$port_key["port_number"]];
-					}else{
+					} else {
 						$brPortIfIndex = @$port_key["port_number"];
 					}
 					$brPortIfType = @$ifInterfaces[$brPortIfIndex]["ifType"];
-				}else{
+				} else {
 					$brPortIfIndex = $port_key["port_number"];
 					$brPortIfType = @$ifInterfaces[$port_key["port_number"]]["ifType"];
 				}
@@ -209,7 +215,7 @@ function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $s
 					$new_port_key_array[$i]["key"] = $port_key["key"];
 					$new_port_key_array[$i]["port_number"] = $port_key["port_number"];
 					$new_port_key_array[$i]["port_name"] = $ifInterfaces[$brPortIfIndex]["ifName"];
-					
+
 					$i++;
 				}
 			}
@@ -218,9 +224,9 @@ function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $s
 
 		/* map mac address */
 		/* only continue if there were user ports defined */
-		if (sizeof($new_port_key_array) > 0) {
+		if (cacti_sizeof($new_port_key_array) > 0) {
 			/* get the bridges active MAC addresses */
-			$port_macs = xform_stripped_oid(".1.3.6.1.2.1.17.4.3.1.1", $device, $snmp_readstring);
+			$port_macs = xform_stripped_oid(".1.3.6.1.2.1.17.4.3.1.1", $device, $snmp_readstring, true);
 
 			foreach ($port_macs as $key => $port_mac) {
 				$port_macs[$key] = xform_mac_address($port_mac);
@@ -231,28 +237,28 @@ function get_3Com_base_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $s
 			}
 
 			mactrack_debug("Port mac address information collected.");
-		}else{
+		} else {
 			mactrack_debug("No user ports on this network.");
 		}
-	}else{
+	} else {
 		mactrack_debug("No user ports on this network.");
 	}
 
 	if ($store_to_db) {
 		if ($ports_active <= 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
-		}elseif (sizeof($new_port_key_array) > 0) {
+		} elseif (cacti_sizeof($new_port_key_array) > 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
 			$device["macs_active"] = sizeof($new_port_key_array);
 			db_store_device_port_results($device, $new_port_key_array, $scan_date);
-		}else{
+		} else {
 			$device["last_runmessage"] = "WARNING: Poller did not find active ports on this device.";
 		}
 
 		if(!$debug) {
 			print(" - Complete\n");
 		}
-	}else{
+	} else {
 		return $new_port_key_array;
 	}
 }

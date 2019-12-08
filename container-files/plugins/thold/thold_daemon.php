@@ -2,7 +2,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2006-2017 The Cacti Group                                 |
+ | Copyright (C) 2006-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -62,8 +62,12 @@ function sig_handler($signo) {
 			}
 		} else {
 			db_execute('TRUNCATE plugin_thold_daemon_processes');
+
 			db_execute('TRUNCATE plugin_thold_daemon_data');
-			db_execute('UPDATE thold_data SET thold_daemon_pid = "" WHERE thold_daemon_pid != ""');
+
+			db_execute('UPDATE thold_data
+				SET thold_daemon_pid = ""
+				WHERE thold_daemon_pid != ""');
 		}
 
 		cacti_log('WARNING: Thold Daemon Process (' . getmypid() . ') terminated by user', false, 'THOLD');
@@ -163,7 +167,7 @@ if ($config['cacti_server_os'] == 'unix') {
 
 /* check if poller daemon is already running */
 exec('pgrep -a php | grep thold_daemon.php', $output);
-if (sizeof($output) >= 2) {
+if (cacti_sizeof($output) >= 2) {
 	print 'The Thold Daemon is still running' . PHP_EOL;
     return;
 }
@@ -298,9 +302,9 @@ while (true) {
 					$pid     = $proc['pid'];
 
 					/* mark the pid as started from here */
-					db_execute_prepared('UPDATE plugin_thold_daemon_processes 
-						SET start = ? 
-						WHERE pid = ?', 
+					db_execute_prepared('UPDATE plugin_thold_daemon_processes
+						SET start = ?
+						WHERE pid = ?',
 						array(microtime(true), $pid));
 
 					$process = '-q ' . $config['base_path'] . '/plugins/thold/thold_process.php --pid=' . $pid . ' > /dev/null';
@@ -390,7 +394,7 @@ function display_version() {
 	}
 
 	$info = plugin_thold_version();
-	echo 'Threshold Daemon, Version ' . $info['version'] . ', ' . COPYRIGHT_YEARS . PHP_EOL;
+	print 'Threshold Daemon, Version ' . $info['version'] . ', ' . COPYRIGHT_YEARS . PHP_EOL;
 }
 
 

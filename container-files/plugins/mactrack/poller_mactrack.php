@@ -2,7 +2,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -23,14 +23,6 @@
  +-------------------------------------------------------------------------+
 */
 
-/* do NOT run this script through a web browser */
-if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
-	die('<br><strong>This script is only meant to run at the command line.</strong>');
-}
-
-/* We are not talking to the browser */
-$no_http_headers = true;
-
 $dir = dirname(__FILE__);
 chdir($dir);
 
@@ -38,10 +30,9 @@ if (substr_count(strtolower($dir), 'mactrack')) {
 	chdir('../../');
 }
 
-/* Start Initialization Section */
-include('./include/global.php');
-include_once('./lib/poller.php');
-include_once('./plugins/mactrack/lib/mactrack_functions.php');
+include('./include/cli_check.php');
+include_once($config['base_path'] . '/lib/poller.php');
+include_once($config['base_path'] . '/plugins/mactrack/lib/mactrack_functions.php');
 
 /* get the mactrack polling cycle */
 $max_run_duration = read_config_option('mt_collection_timing');
@@ -56,10 +47,13 @@ if (is_numeric($max_run_duration)) {
 /* Disable Mib File Loading */
 putenv('MIBS=RFC-1215');
 
+/* Allow Mactrack to Use Memory */
+ini_set('memory_limit', '-1');
+
 global $debug, $web, $track_errors;
 
 /* initialize variables */
-$site_id  = '';
+$site_id  = 0;
 $debug    = false;
 $forcerun = false;
 $web      = false;
@@ -70,7 +64,7 @@ $track_errors = 0;
 $parms = $_SERVER['argv'];
 array_shift($parms);
 
-if (sizeof($parms)) {
+if (cacti_sizeof($parms)) {
 	foreach($parms as $parameter) {
 		if (strpos($parameter, '=')) {
 			list($arg, $value) = explode('=', $parameter);
@@ -119,19 +113,20 @@ clear_old_processes($site_id);
 if (read_config_option('mt_collection_timing') == 'disabled') {
 	echo "WARNING: Device Tracking is disabled, exiting\n";
 	exit(1);
-}else{
+} else {
 	/* for manual scans, verify if we should run or not */
 	$running_processes = db_fetch_cell('SELECT count(*) FROM mac_track_processes');
+
 	if ($running_processes) {
 		$start_date = db_fetch_cell('SELECT MIN(start_date) FROM mac_track_processes');
 
-		if (strtotime($start_date) > (time() - $max_run_duration) && !$forcerun) {
-			mactrack_debug('ERROR: Can not start MAC Tracking process.  There is already one in progress');
-			exit;
-		}else if ($forcerun) {
+		if (time() < (strtotime($start_date) + $max_run_duration) && !$forcerun) {
+			echo "NOTE: Device Tracking currently running and max run duration not eclipsed.\n";
+			exit(0);
+		} elseif ($forcerun) {
 			mactrack_debug('WARNING: Forcing Collection although Collection Appears in Process', true, 'MACTRACK');
 			db_execute('TRUNCATE mac_track_processes');
-		}else{
+		} else {
 			mactrack_debug('WARNING: Stale data found in Device Tracking process table', true, 'MACTRACK');
 			db_execute('TRUNCATE mac_track_processes');
 		}
@@ -140,14 +135,14 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 	/* we don't want to see errors in the cacti log */
 	errors_disable();
 
-	if ($site_id != '') {
+	if ($site_id > 0) {
 		mactrack_debug('About to enter Device Tracking Site Scan Processing');
 
 		/* take time and log performance data */
 		$start = microtime(true);
 
 		collect_mactrack_data($start, $site_id);
-	}else{
+	} else {
 		mactrack_debug('About to enter Device Tracking poller processing');
 		$seconds_offset = read_config_option('mt_collection_timing');
 		if (($seconds_offset <> 'disabled') || $forcerun) {
@@ -182,15 +177,8 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 			}
 
 			/* set to detect if the user cleared the time between polling cycles */
-			db_execute_prepared('REPLACE INTO settings 
-				(name, value) VALUES 
-				("mt_prev_base_time", ?)', 
-				array($base_start_time));
-
-			db_execute_prepared('REPLACE INTO settings 
-				(name, value) VALUES 
-				("mt_prev_db_maint_time", ?)', 
-				array($database_maint_time));
+			set_config_option('mt_prev_base_time', $base_start_time);
+			set_config_option('mt_prev_db_maint_time', $database_maint_time);
 
 			/* determine the next start time */
 			$current_time = strtotime('now');
@@ -199,37 +187,33 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 					/* if timer expired within a polling interval, then poll */
 					if (($current_time - 300) < strtotime($base_start_time)) {
 						$next_run_time = strtotime(date('Y-m-d') . ' ' . $base_start_time);
-					}else{
+					} else {
 						$next_run_time = strtotime(date('Y-m-d') . ' ' . $base_start_time) + 3600*24;
 					}
-				}else{
+				} else {
 					$next_run_time = strtotime(date('Y-m-d') . ' ' . $base_start_time);
 				}
-			}else{
+			} else {
 				$next_run_time = $last_run_time + $seconds_offset;
 			}
 			$time_till_next_run = $next_run_time - $current_time;
 
 			if ($time_till_next_run < 0) {
 				mactrack_debug('The next run time has been determined to be NOW');
-			}else{
+			} else {
 				mactrack_debug("The next run time has been determined to be at '" . date('Y-m-d G:i:s', $next_run_time) . "'");
 			}
 
 			if (empty($last_db_maint_time)) {
-				if (strtotime($database_maint_time) < $current_time) {
-					$next_db_maint_time = strtotime(date('Y-m-d') . ' ' . $database_maint_time) + 3600*24;
-				}else{
-					$next_db_maint_time = strtotime(date('Y-m-d') . ' ' . $database_maint_time);
-				}
-			}else{
+				$next_db_maint_time = strtotime(date('Y-m-d') . ' ' . $database_maint_time);
+			} else {
 				$next_db_maint_time = $last_db_maint_time + 24*3600;
 			}
 
 			$time_till_next_db_maint = $next_db_maint_time - $current_time;
 			if ($time_till_next_db_maint < 0) {
 				mactrack_debug('The next database maintenance run time has been determined to be NOW');
-			}else{
+			} else {
 				mactrack_debug("The next database maintenance run time has been determined to be at '" . date('Y-m-d G:i:s', $next_db_maint_time) . "'");
 			}
 
@@ -239,10 +223,7 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 				/* take time and log performance data */
 				$start = microtime(true);
 
-				db_execute_prepared('REPLACE INTO settings 
-					(name, value) VALUES 
-					("mt_last_run_time", ?)',
-					array($current_time));
+				set_config_option('mt_last_run_time', $current_time);
 
 				collect_mactrack_data($start, $site_id);
 				log_mactrack_statistics('collect');
@@ -252,10 +233,7 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 				/* take time and log performance data */
 				$start = microtime(true);
 
-				db_execute_prepared('REPLACE INTO settings 
-					(name, value) VALUES 
-					("mt_last_db_maint_time", ?)',
-					array($current_time));
+				set_config_option('mt_last_db_maint_time', $current_time);
 
 				perform_mactrack_db_maint();
 				log_mactrack_statistics('maint');
@@ -270,14 +248,14 @@ if (read_config_option('mt_collection_timing') == 'disabled') {
 function errors_disable() {
 	global $track_errors;
 	$track_errors = ini_get('track_errors');
-	ini_set('track_errors', 0); 
+	ini_set('track_errors', 0);
 
 	set_error_handler('mactrack_error_handler');
 }
 
 function errors_restore() {
 	global $track_errors;
-	ini_set('track_errors', $track_errors); 
+	ini_set('track_errors', $track_errors);
 
 	restore_error_handler();
 }
@@ -336,10 +314,6 @@ function mactrack_error_handler($level, $message, $file, $line, $context) {
 function display_version() {
 	global $config;
 
-	if (!function_exists('plugin_macktrack_version')) {
-		include_once($config['base_path'] . '/plugins/mactrack/setup.php');
-	}
-
 	$info = plugin_mactrack_version();
 	print 'Device Tracking Master Poller, Version ' . $info['version'] . ', ' .  COPYRIGHT_YEARS . "\n";
 }
@@ -361,30 +335,30 @@ function clear_old_processes($site_id) {
 	$delete_time = date('Y-m-d H:i:s', strtotime('-' . $max_script_runtime . ' Minutes'));
 
 	/* remove old processes from the system if they exist */
-	$old_procs = db_fetch_assoc_prepared('SELECT mtp.* 
+	$old_procs = db_fetch_assoc_prepared('SELECT mtp.*
 		FROM mac_track_processes AS mtp
 		INNER JOIN mac_track_devices AS mtd
-		ON mtp.device_id=mtd.device_id 
-		WHERE start_date < ?' . ($site_id > 0 ? ' AND site_id=' . $site_id:''), 
+		ON mtp.device_id=mtd.device_id
+		WHERE start_date < ?' . ($site_id > 0 ? ' AND site_id=' . $site_id:''),
 		array($delete_time));
 
-	if (sizeof($old_procs)) {
+	if (cacti_sizeof($old_procs)) {
 		foreach($old_procs as $p) {
 			if ($p['process_id'] > 0) {
 				if (strstr(PHP_OS, 'WIN')) {
 					exec('taskkill /pid ' . $p['process_id']);
-				}else{
+				} else {
 					exec('kill ' . $p['process_id']);
 				}
 
 				cacti_log("WARNING: Removing Hung Device Tracking Process for Device '" . $p['device_id'] . "' With Status '" . $p['status'] . "'");
-			}else{
+			} else {
 				cacti_log("WARNING: Removing Hung Device Tracking Process Entry for Device '" . $p['device_id'] . "' With Status '" . $p['status'] . "'");
 			}
 
-			db_execute_prepared('DELETE FROM mac_track_processes 
-				WHERE process_id = ?', 
-				array($p));
+			db_execute_prepared('DELETE FROM mac_track_processes
+				WHERE process_id = ?',
+				array($p['process_id']));
 		}
 	}
 }
@@ -401,7 +375,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 	if (read_config_option('mt_reverse_dns') == 'on') {
 		$dns_resolver_required = true;
-	}else{
+	} else {
 		$dns_resolver_required = false;
 	}
 
@@ -409,12 +383,9 @@ function collect_mactrack_data($start, $site_id = 0) {
 	$command_string = read_config_option('path_php_binary');
 
 	/* save the scan date information */
-	if ($site_id == '') {
-		$scan_date = date('Y-m-d H:i:s');
-		db_execute_prepared("REPLACE INTO settings 
-			(name, value) VALUES 
-			('mt_scan_date', ?)",
-			array($scan_date));
+	$scan_date = date('Y-m-d H:i:s');
+	if ($site_id == 0) {
+		set_config_option('mt_scan_date', $scan_date);
 	}
 
 	/* just in case we've run too long */
@@ -422,15 +393,15 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 	/* start mainline processing, order by site_id to keep routers grouped with switches */
 	if ($site_id > 0) {
-		$device_ids = db_fetch_assoc_prepared('SELECT device_id 
-			FROM mac_track_devices 
+		$device_ids = db_fetch_assoc_prepared('SELECT device_id
+			FROM mac_track_devices
 			WHERE site_id = ?
 			AND disabled=""',
 			array($site_id));
-	}else{
-		$device_ids = db_fetch_assoc("SELECT device_id 
-			FROM mac_track_devices 
-			WHERE disabled='' 
+	} else {
+		$device_ids = db_fetch_assoc("SELECT device_id
+			FROM mac_track_devices
+			WHERE disabled=''
 			ORDER BY site_id");
 	}
 
@@ -440,13 +411,13 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 	if ($debug == true) {
 		$e_debug = ' -d';
-	}else{
+	} else {
 		$e_debug = '';
 	}
 
-	if ($site_id) {
+	if ($site_id > 0) {
 		$e_site = " -sid=$site_id";
-	}else{
+	} else {
 		$e_site = '';
 	}
 
@@ -489,7 +460,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 					fclose($arp_dat);
 
 					mactrack_debug('ARPWATCH: IP, DNS & MAC collection complete with ArpWatch');
-				}else{
+				} else {
 					cacti_log("ERROR: cannot open file ArpWatch database '$arp_db'");exit;
 				}
 			}
@@ -536,7 +507,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 					AND mac_track_temp_ports.site_id=mac_track_ips.site_id
 					SET mac_track_temp_ports.ip_address=mac_track_ips.ip_address,
 					mac_track_temp_ports.updated=1
-					WHERE mac_track_temp_ports.updated=0 
+					WHERE mac_track_temp_ports.updated=0
 					AND mac_track_ips.scan_date = ?',
 					array($scan_date));
 
@@ -549,7 +520,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 			if ($dns_resolver_required) {
 				$processes_available = $concurrent_processes - $processes_running + 1;
-			}else{
+			} else {
 				$processes_available = $concurrent_processes - $processes_running;
 			}
 
@@ -563,19 +534,19 @@ function collect_mactrack_data($start, $site_id = 0) {
 				db_execute("DELETE FROM settings WHERE name='mactrack_process_status'");
 				db_process_remove('-1');
 				break;
-			}else{
-				db_execute("REPLACE INTO settings SET name='mactrack_process_status', value='Total:$total_devices Completed:$j'");
+			} else {
+				set_config_option('mactrack_process_status', "Total:$total_devices Completed:$j");
 			}
 		}
 
 		/* wait for last process to exit */
-		$processes_running = db_fetch_cell('SELECT count(*) FROM mac_track_processes WHERE device_id > 0');
+		$processes_running = db_fetch_cell('SELECT COUNT(*) FROM mac_track_processes WHERE device_id > 0');
 		while (($processes_running > 0) && (!$exit_mactrack)) {
-			$processes_running = db_fetch_cell('SELECT count(*) 
-				FROM mac_track_processes 
+			$processes_running = db_fetch_cell('SELECT count(*)
+				FROM mac_track_processes
 				WHERE device_id > 0');
 
-			$devices_running = db_fetch_cell("SELECT group_concat(CAST(`device_id` as CHAR) SEPARATOR ', ') as t 
+			$devices_running = db_fetch_cell("SELECT group_concat(CAST(`device_id` as CHAR) SEPARATOR ', ') as t
 				FROM mac_track_processes");
 
 			/* wait the correct number of seconds for proccesses prior to
@@ -591,7 +562,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 					AND mac_track_temp_ports.site_id=mac_track_ips.site_id
 					SET mac_track_temp_ports.ip_address=mac_track_ips.ip_address,
 					mac_track_temp_ports.updated=1
-					WHERE mac_track_temp_ports.updated=0 
+					WHERE mac_track_temp_ports.updated=0
 					AND mac_track_ips.scan_date = ?',
 					array($scan_date));
 
@@ -612,12 +583,12 @@ function collect_mactrack_data($start, $site_id = 0) {
 		}
 
 		/* if arpwatch is enabled, let's let it pick up the stragglers, based upon IP address first */
-		if ((read_config_option('mt_arpwatch') == 'on') && (sizeof($mac_ip_dns))) {
+		if ((read_config_option('mt_arpwatch') == 'on') && (cacti_sizeof($mac_ip_dns))) {
 			$ports = db_fetch_assoc('SELECT site_id, device_id, mac_address
 				FROM mac_track_temp_ports
 				WHERE updated = 0');
 
-			if (sizeof($ports)) {
+			if (cacti_sizeof($ports)) {
 				foreach($ports as $port) {
 					if (isset($mac_ip_dns[$port['mac_address']])) {
 						db_execute("UPDATE mac_track_temp_ports
@@ -637,14 +608,14 @@ function collect_mactrack_data($start, $site_id = 0) {
 			ON mac_track_temp_ports.mac_address=mac_track_ips.mac_address
 			AND mac_track_temp_ports.site_id=mac_track_ips.site_id
 			SET mac_track_temp_ports.ip_address=mac_track_ips.ip_address
-			WHERE mac_track_temp_ports.updated=0 
-			AND mac_track_ips.scan_date = ?', 
+			WHERE mac_track_temp_ports.updated=0
+			AND mac_track_ips.scan_date = ?',
 			array($scan_date));
 
 		mactrack_debug('Interum IP addresses to MAC addresses association pass complete.');
 
 		/* populate the vendor_macs for this pass */
-		db_execute('UPDATE mac_track_temp_ports 
+		db_execute('UPDATE mac_track_temp_ports
 			SET vendor_mac=SUBSTRING(mac_address,1,8)');
 
 		mactrack_debug('MAC addresses to Vendor MACS association pass complete.');
@@ -652,10 +623,10 @@ function collect_mactrack_data($start, $site_id = 0) {
 		/* update the vlan id's table */
 		db_execute("UPDATE mac_track_vlans SET present='0'");
 
-		db_execute("INSERT INTO mac_track_vlans 
-			(vlan_id, site_id, device_id, vlan_name, present) 
-			SELECT vlan_id, site_id, device_id, vlan_name, '1' AS present 
-			FROM mac_track_temp_ports 
+		db_execute("INSERT INTO mac_track_vlans
+			(vlan_id, site_id, device_id, vlan_name, present)
+			SELECT vlan_id, site_id, device_id, vlan_name, '1' AS present
+			FROM mac_track_temp_ports
 			ON DUPLICATE KEY UPDATE vlan_name=VALUES(vlan_name), present=VALUES(present);");
 
 		db_execute("DELETE FROM mac_track_vlans WHERE present='0'");
@@ -668,11 +639,11 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 		while (!$exit_mactrack) {
 			/* checking to see if the resolver is running */
-			$resolver_running = db_fetch_row('SELECT * 
-				FROM mac_track_processes 
+			$resolver_running = db_fetch_row('SELECT *
+				FROM mac_track_processes
 				WHERE device_id = 0');
 
-			if (sizeof($resolver_running) == 0) {
+			if (cacti_sizeof($resolver_running) == 0) {
 				break;
 			}
 
@@ -714,13 +685,13 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 		if (is_array($ip_ranges)) {
 			foreach($ip_ranges as $ip_range) {
-				$range_record = db_fetch_row_prepared('SELECT * 
-					FROM mac_track_ip_ranges 
+				$range_record = db_fetch_row_prepared('SELECT *
+					FROM mac_track_ip_ranges
 					WHERE ip_range = ?
-					AND site_id = ?', 
+					AND site_id = ?',
 					array($ip_range['ip_range'], $ip_range['site_id']));
 
-				if (sizeof($range_record) == 0) {
+				if (cacti_sizeof($range_record) == 0) {
 					db_execute_prepared('REPLACE INTO `mac_track_ip_ranges`
 						(ip_range, site_id, ips_current, ips_current_date)
 						VALUES (?, ?, ?, ?)',
@@ -731,16 +702,16 @@ function collect_mactrack_data($start, $site_id = 0) {
 							$ip_range['ips_current_date']
 						)
 					);
-				}else{
+				} else {
 					db_execute_prepared('UPDATE mac_track_ip_ranges
 						SET ips_current = ?,
-						ips_current_date = ? 
+						ips_current_date = ?
 						WHERE ip_range = ?
-						AND site_id = ?', 
+						AND site_id = ?',
 						array(
-							$ip_range['ips_current'], 
-							$ip_range['ips_current_date'], 
-							$range_record['ip_range'], 
+							$ip_range['ips_current'],
+							$ip_range['ips_current_date'],
+							$range_record['ip_range'],
 							$range_record['site_id']
 						)
 					);
@@ -762,7 +733,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 				sum(ports_total) as total_user_ports
 				FROM mac_track_devices
 				GROUP BY site_id');
-		}else{
+		} else {
 			$stats = db_fetch_assoc_prepared('SELECT site_id,
 				count(device_id) as total_devices,
 				sum(ports_active) as total_oper_ports,
@@ -784,7 +755,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 				FROM mac_track_ips
 				WHERE scan_date = ?
 				GROUP BY site_id',
-				array($scan_date)), 
+				array($scan_date)),
 			'site_id', 'total_ips'
 		);
 
@@ -805,9 +776,9 @@ function collect_mactrack_data($start, $site_id = 0) {
 				$num_ips = 0;
 			}
 
-			db_execute_prepared('UPDATE mac_track_sites 
-				SET total_devices = ?, total_ips = ?, total_macs = ?, 
-				total_oper_ports = ?, total_user_ports = ?, total_device_errors = ?  
+			db_execute_prepared('UPDATE mac_track_sites
+				SET total_devices = ?, total_ips = ?, total_macs = ?,
+				total_oper_ports = ?, total_user_ports = ?, total_device_errors = ?
 				WHERE site_id = ?',
 				array(
 					$stat['total_devices'],
@@ -825,7 +796,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 
 		/* process macwatch data */
 		$macwatches = db_fetch_assoc('SELECT * FROM mac_track_macwatch');
-		if (sizeof($macwatches)) {
+		if (cacti_sizeof($macwatches)) {
 			$from     = read_config_option('mt_from_email');
 			$fromname = read_config_option('mt_from_name');
 
@@ -836,7 +807,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 					WHERE mac_address = ?',
 					array($record['mac_address']));
 
-				if (sizeof($found)) {
+				if (cacti_sizeof($found)) {
 					/* set the subject */
 					$subject = "MACAUTH Notification: Mac Address '" . $record['mac_address'] . "' Found, For: '" . $record['name'] . "'";
 
@@ -869,7 +840,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 					db_execute_prepared('UPDATE mac_track_macwatch
 						SET discovered=1, date_last_seen=NOW()' .
 						(strtotime($record['date_first_seen']) == 0 ? ', date_first_seen=NOW()':'') . '
-						WHERE mac_address = ?', 
+						WHERE mac_address = ?',
 						array($record['mac_address']));
 				}
 			}
@@ -907,7 +878,7 @@ function collect_mactrack_data($start, $site_id = 0) {
 		db_execute('OPTIMIZE TABLE mac_track_ips');
 		db_execute('TRUNCATE TABLE mac_track_scan_dates');
 		db_execute('REPLACE INTO mac_track_scan_dates (SELECT DISTINCT scan_date from mac_track_ports)');
-	}else{
+	} else {
 		cacti_log('NOTE: MACTRACK has no devices to process at this time', false, 'MACTRACK');
 	}
 }
@@ -919,7 +890,7 @@ function mactrack_process_mac_auth_report($mac_auth_frequency, $last_macauth_tim
 			LEFT JOIN mac_track_sites
 			ON mac_track_sites.site_id=mac_track_temp_ports.site_id
 			WHERE authorized=0');
-	}else{
+	} else {
 		$ports = db_fetch_assoc('SELECT mac_track_ports.*, mac_track_sites.site_name
 			FROM mac_track_ports
 			LEFT JOIN mac_track_sites
@@ -927,13 +898,13 @@ function mactrack_process_mac_auth_report($mac_auth_frequency, $last_macauth_tim
 			WHERE authorized=0');
 	}
 
-	if (sizeof($ports)) {
+	if (cacti_sizeof($ports)) {
 		foreach($ports as $port) {
 			/* create the report */
 		}
 
 		/* email the report */
-	}else{
+	} else {
 		if ($mac_auth_frequency > 0) {
 			/* send out an empty report */
 		}
@@ -945,9 +916,13 @@ function log_mactrack_statistics($type = 'collect') {
 
 	/* let's get the number of devices */
 	if (is_numeric($site_id)) {
-		$devices = db_fetch_cell_prepared('SELECT Count(*) FROM mac_track_devices WHERE site_id = ?', array($site_id));
-	}else{
-		$devices = db_fetch_cell('SELECT Count(*) FROM mac_track_devices');
+		$devices = db_fetch_cell_prepared('SELECT COUNT(*)
+			FROM mac_track_devices
+			WHERE site_id = ?',
+			array($site_id));
+	} else {
+		$devices = db_fetch_cell('SELECT COUNT(*)
+			FROM mac_track_devices');
 	}
 
 	$concurrent_processes = read_config_option('mt_processes');
@@ -965,21 +940,15 @@ function log_mactrack_statistics($type = 'collect') {
 			$devices);
 
 		/* log to the database */
-		db_execute_prepared('REPLACE INTO settings 
-			(name,value) VALUES 
-			("stats_mactrack", ?)',
-			array($cacti_stats));
+		set_config_option('stats_mactrack', $cacti_stats);
 
 		/* log to the logfile */
 		cacti_log('MACTRACK STATS: ' . $cacti_stats, true, 'SYSTEM');
-	}else{
+	} else {
 		$cacti_stats = sprintf('Time:%01.4f', round($end-$start,4));
 
 		/* log to the database */
-		db_execute('REPLACE INTO settings 
-			(name,value) VALUES 
-			("stats_mactrack_maint", ?)',
-			array($cacti_stats));
+		set_config_option('stats_mactrack_maint', $cacti_stats);
 
 		/* log to the logfile */
 		cacti_log('MACTRACK MAINT STATS: ' . $cacti_stats, true, 'SYSTEM');

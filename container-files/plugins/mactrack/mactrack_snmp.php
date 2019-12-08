@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -20,11 +20,12 @@
  +-------------------------------------------------------------------------+
  | http://www.cacti.net/                                                   |
  +-------------------------------------------------------------------------+
- */
+*/
 
 chdir('../../');
 include('./include/auth.php');
 include_once('./lib/snmp.php');
+include_once('./plugins/mactrack/lib/mactrack_functions.php');
 
 $mactrack_snmp_actions = array(
 	1 => __('Delete', 'mactrack'),
@@ -91,13 +92,13 @@ function form_mactrack_snmp_save() {
 			$id = sql_save($save, 'mac_track_snmp');
 			if ($id) {
 				raise_message(1);
-			}else{
+			} else {
 				raise_message(2);
 			}
 		}
 
 		header('Location: mactrack_snmp.php?header=false&action=edit&id=' . (empty($id) ? get_filter_request_var('id') : $id));
-	}elseif (isset_request_var('save_component_mactrack_snmp_item')) {
+	} elseif (isset_request_var('save_component_mactrack_snmp_item')) {
 		/* ================= input validation ================= */
 		get_filter_request_var('item_id');
 		get_filter_request_var('id');
@@ -125,14 +126,14 @@ function form_mactrack_snmp_save() {
 
 			if ($item_id) {
 				raise_message(1);
-			}else{
+			} else {
 				raise_message(2);
 			}
 		}
 
 		if (is_error_message()) {
 			header('Location: mactrack_snmp.php?header=false&action=item_edit&id=' . get_nfilter_request_var('id') . '&item_id=' . (empty($item_id) ? get_nfilter_request_var('id') : $item_id));
-		}else{
+		} else {
 			header('Location: mactrack_snmp.php?header=false&action=edit&id=' . get_nfilter_request_var('id'));
 		}
 	} else {
@@ -162,7 +163,7 @@ function form_mactrack_snmp_actions() {
 			if (get_nfilter_request_var('drp_action') == '1') { /* delete */
 				db_execute('DELETE FROM mac_track_snmp WHERE ' . array_to_sql_or($selected_items, 'id'));
 				db_execute('DELETE FROM mac_track_snmp_items WHERE ' . str_replace('id', 'snmp_id', array_to_sql_or($selected_items, 'id')));
-			}elseif (get_nfilter_request_var('drp_action') == '2') { /* duplicate */
+			} elseif (get_nfilter_request_var('drp_action') == '2') { /* duplicate */
 				for ($i=0;($i<count($selected_items));$i++) {
 					duplicate_mactrack($selected_items[$i], get_nfilter_request_var('name_format'));
 				}
@@ -176,7 +177,7 @@ function form_mactrack_snmp_actions() {
 	/* setup some variables */
 	$snmp_groups = ''; $i = 0;
 	/* loop through each of the graphs selected on the previous page and get more info about them */
-	while (list($var,$val) = each($_POST)) {
+	foreach ($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
 			/* ================= input validation ================= */
 			input_validate_input_number($matches[1]);
@@ -189,8 +190,6 @@ function form_mactrack_snmp_actions() {
 	}
 
 	general_header();
-
-	display_output_messages();
 
 	?>
 	<script type='text/javascript'>
@@ -207,7 +206,7 @@ function form_mactrack_snmp_actions() {
 	if (!isset($mactrack_array)) {
 		print "<tr><td class='even'><span class='textError'>" . __('You must select at least one SNMP Option.', 'mactrack') . "</span></td></tr>\n";
 		$save_html = "";
-	}else{
+	} else {
 		$save_html = "<input type='submit' value='" . __esc('Continue', 'mactrack') . "' name='save'>";
 
 		if (get_nfilter_request_var("drp_action") == '1') { /* delete */
@@ -217,7 +216,7 @@ function form_mactrack_snmp_actions() {
 					<ul>$snmp_groups</ul>
 				</td>
 			</tr>";
-		}elseif (get_nfilter_request_var("drp_action") == '2') { /* duplicate */
+		} elseif (get_nfilter_request_var("drp_action") == '2') { /* duplicate */
 			print "<tr>
 				<td class='textArea'>
 					<p>" . __('Click \'Continue\' to duplicate the following SNMP Option(s). You can optionally change the title format for the new SNMP Options.', 'mactrack') . "</p>
@@ -269,8 +268,8 @@ function mactrack_snmp_item_remove() {
 	get_filter_request_var('item_id');
 	/* ==================================================== */
 
-	db_execute_prepared('DELETE FROM mac_track_snmp_items 
-		WHERE id = ?', 
+	db_execute_prepared('DELETE FROM mac_track_snmp_items
+		WHERE id = ?',
 		array(get_request_var('item_id')));
 }
 
@@ -278,28 +277,26 @@ function mactrack_snmp_item_edit() {
 	global $config;
 	global $fields_mactrack_snmp_item_edit;
 
-	include_once($config['base_path'].'/plugins/mactrack/lib/mactrack_functions.php');
-
 	/* ================= input validation ================= */
 	get_filter_request_var('id');
 	get_filter_request_var('item_id');
 	/* ==================================================== */
 
 	# fetch the current mactrack snmp record
-	$snmp_option = db_fetch_row_prepared('SELECT * 
-		FROM mac_track_snmp 
-		WHERE id = ?', 
+	$snmp_option = db_fetch_row_prepared('SELECT *
+		FROM mac_track_snmp
+		WHERE id = ?',
 		array(get_request_var('id')));
 
 	# if an existing item was requested, fetch data for it
 	if (get_request_var('item_id', '') !== '') {
-		$mactrack_snmp_item = db_fetch_row_prepared('SELECT * 
-			FROM mac_track_snmp_items 
-			WHERE id = ?', 
+		$mactrack_snmp_item = db_fetch_row_prepared('SELECT *
+			FROM mac_track_snmp_items
+			WHERE id = ?',
 			array(get_request_var('item_id')));
 
 		$header_label = __('SNMP Options [edit %s]', $snmp_option['name'], 'mactrack');
-	}else{
+	} else {
 		$header_label = __('SNMP Options [new]', 'mactrack');
 
 		$mactrack_snmp_item = array();
@@ -345,8 +342,6 @@ function mactrack_snmp_item_edit() {
 function mactrack_snmp_edit() {
 	global $config, $fields_mactrack_snmp_edit;
 
-	include_once($config['base_path'] . '/plugins/mactrack/lib/mactrack_functions.php');
-
 	/* ================= input validation ================= */
 	get_filter_request_var('id');
 	get_filter_request_var('page');
@@ -364,13 +359,13 @@ function mactrack_snmp_edit() {
 	/* display the mactrack snmp option set */
 	$snmp_group = array();
 	if (!isempty_request_var('id')) {
-		$snmp_group = db_fetch_row_prepared('SELECT * 
-			FROM mac_track_snmp 
-			WHERE id = ?', 
+		$snmp_group = db_fetch_row_prepared('SELECT *
+			FROM mac_track_snmp
+			WHERE id = ?',
 			array(get_request_var('id')));
 
 		$header_label = __('SNMP Option Set [edit: %s]', $snmp_group['name'], 'mactrack');
-	}else{
+	} else {
 		$header_label = __('SNMP Option Set [new]', 'mactrack');
 	}
 
@@ -390,10 +385,10 @@ function mactrack_snmp_edit() {
 	form_hidden_box('save_component_mactrack_snmp', '1', '');
 
 	if (!isempty_request_var('id')) {
-		$items = db_fetch_assoc_prepared('SELECT * 
-			FROM mac_track_snmp_items 
-			WHERE snmp_id= ? 
-			ORDER BY sequence', 
+		$items = db_fetch_assoc_prepared('SELECT *
+			FROM mac_track_snmp_items
+			WHERE snmp_id= ?
+			ORDER BY sequence',
 			array(get_request_var('id')));
 
 		html_start_box(__('Device Tracking SNMP Options', 'mactrack'), '100%', '', '3', 'center', 'mactrack_snmp.php?action=item_edit&id=' . get_request_var('id'));
@@ -413,7 +408,7 @@ function mactrack_snmp_edit() {
 		print '</tr>';
 
 		$i = 1;
-		if (sizeof($items)) {
+		if (cacti_sizeof($items)) {
 			foreach ($items as $item) {
 				form_alternate_row();
 				$form_data = '<td><a class="linkEditMain" href="' . htmlspecialchars('mactrack_snmp.php?action=item_edit&item_id=' . $item['id'] . '&id=' . $item['snmp_id']) . '">Item#' . $i . '</a></td>';
@@ -453,28 +448,28 @@ function mactrack_snmp() {
 	/* ================= input validation and session storage ================= */
 	$filters = array(
 		'rows' => array(
-			'filter' => FILTER_VALIDATE_INT, 
+			'filter' => FILTER_VALIDATE_INT,
 			'pageset' => true,
 			'default' => '-1'
 			),
 		'page' => array(
-			'filter' => FILTER_VALIDATE_INT, 
+			'filter' => FILTER_VALIDATE_INT,
 			'default' => '1'
 			),
 		'filter' => array(
-			'filter' => FILTER_CALLBACK, 
+			'filter' => FILTER_CALLBACK,
 			'pageset' => true,
-			'default' => '', 
+			'default' => '',
 			'options' => array('options' => 'sanitize_search_string')
 			),
 		'sort_column' => array(
-			'filter' => FILTER_CALLBACK, 
-			'default' => 'name', 
+			'filter' => FILTER_CALLBACK,
+			'default' => 'name',
 			'options' => array('options' => 'sanitize_search_string')
 			),
 		'sort_direction' => array(
-			'filter' => FILTER_CALLBACK, 
-			'default' => 'ASC', 
+			'filter' => FILTER_CALLBACK,
+			'default' => 'ASC',
 			'options' => array('options' => 'sanitize_search_string')
 			)
 	);
@@ -484,7 +479,7 @@ function mactrack_snmp() {
 
 	if (get_request_var('rows') == '-1') {
 		$rows = read_config_option('num_rows_table');
-	}else{
+	} else {
 		$rows = get_request_var('rows');
 	}
 
@@ -526,20 +521,20 @@ function mactrack_snmp() {
 
 	html_header_sort_checkbox($display_text, get_request_var('sort_column'), get_request_var('sort_direction'));
 
-	if (sizeof($snmp_groups)) {
+	if (cacti_sizeof($snmp_groups)) {
 		foreach ($snmp_groups as $snmp_group) {
 			form_alternate_row('line' . $snmp_group['id'], true);
 			form_selectable_cell(filter_value($snmp_group['name'], get_request_var('filter'), 'mactrack_snmp.php?action=edit&id=' . $snmp_group['id'] . '&page=1'), $snmp_group['id']);
 			form_checkbox_cell($snmp_group['name'], $snmp_group['id']);
 			form_end_row();
 		}
-	}else{
+	} else {
 		print '<tr><td colspan="3"><em>' . __('No SNMP Option Sets Found', 'mactrack') . '</em></td></tr>';
 	}
 
 	html_end_box(false);
 
-	if (sizeof($snmp_groups)) {
+	if (cacti_sizeof($snmp_groups)) {
 		print $nav;
 	}
 
@@ -569,7 +564,7 @@ function snmp_options_filter() {
 					<td>
 						<select id='rows' onChange='applyFilter()'>
 							<option value='-1'<?php print (get_request_var('rows') == '-1' ? ' selected':'');?>><?php print __('Default', 'mactrack');?></option>
-							<?php if (sizeof($item_rows)) {
+							<?php if (cacti_sizeof($item_rows)) {
 								foreach ($item_rows as $key => $value) {
 									print '<option value="' . $key . '"';
 									if (get_request_var('rows') == $key) {

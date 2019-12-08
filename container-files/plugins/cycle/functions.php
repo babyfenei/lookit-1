@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -21,6 +21,8 @@
  | http://www.cacti.net/                                                   |
  +-------------------------------------------------------------------------+
 */
+
+include_once(__DIR__ . '/setup.php');
 
 $graphs_ppage = array(
     1   => __('%d Graph', 1, 'cycle'),
@@ -108,6 +110,8 @@ function save_settings() {
 }
 
 function validate_request_vars($force = false) {
+	cycle_config_settings(true);
+
 	/* ================= input validation and session storage ================= */
 	$filters = array(
 		'id' => array(
@@ -184,16 +188,16 @@ function cycle_set_defaults() {
 		);
 
 		foreach($defaults as $name => $value) {
-			$current = db_fetch_cell_prepared('SELECT value 
-				FROM settings_user 
+			$current = db_fetch_cell_prepared('SELECT value
+				FROM settings_user
 				WHERE name = ?
-				AND user_id = ?', 
+				AND user_id = ?',
 				array($name, $user));
 
 			if ($current === false) {
-				db_execute_prepared('REPLACE INTO settings_user 
-					(user_id, name, value) 
-					VALUES (?, ?, ?)', 
+				db_execute_prepared('REPLACE INTO settings_user
+					(user_id, name, value)
+					VALUES (?, ?, ?)',
 					array($user, $name, $value));
 			}
 		}
@@ -379,7 +383,7 @@ function get_next_graphid($graphpp, $filter, $graph_tree, $leaf_id) {
 							}else{
 								$next_graph_id = $row['id'];
 								$next_found    = true;
-		
+
 								break;
 							}
 						}
@@ -398,7 +402,7 @@ function get_next_graphid($graphpp, $filter, $graph_tree, $leaf_id) {
 		}
 
 		/* When a user hits the 'Prev' button, we have to go backwards.
-		 * Therefore, find the graph_id that would have to be used as 
+		 * Therefore, find the graph_id that would have to be used as
 		 * the starting point if the user were to hit the 'Prev' button.
 		 *
 		 * Just like the 'Next' button, we need to scan the database until
@@ -521,9 +525,10 @@ function get_tree_graphs($tree_id, $leaf_id) {
 			$sql_leaf = '';
 		}
 
-		$items = db_fetch_assoc('SELECT *
+		$sql = 'SELECT *
 			FROM graph_tree_items AS gti
-			WHERE ' . $sql_leaf . ' graph_tree_id=' . $tree_id);
+			WHERE ' . $sql_leaf . ' graph_tree_id=' . $tree_id;
+		$items = db_fetch_assoc($sql);
 
 		if (sizeof($items)) {
 			foreach($items as $i) {
@@ -532,7 +537,7 @@ function get_tree_graphs($tree_id, $leaf_id) {
 				} elseif ($i['host_id'] > 0 && is_device_allowed($i['host_id'])) {
 					$hosts[$i['host_id']] = $i['host_id'];
 				}elseif ($leaf_id > -2) {
-					$outArray += get_tree_graphs($tree_id, $i['id']);	
+					$outArray += get_tree_graphs($tree_id, $i['id']);
 				}
 			}
 		}
@@ -545,7 +550,7 @@ function get_tree_graphs($tree_id, $leaf_id) {
 			$graphs = get_allowed_graphs('(gl.id IN(' . implode(',', $graphs) . '))');
 		}
 	}
-	
+
 	if (isset($graphs) && sizeof($graphs)) {
 		foreach($graphs as $i) {
 			$outArray[$i['local_graph_id']] = $i['title_cache'];

@@ -1,36 +1,41 @@
 <?php
 /*
-   +-------------------------------------------------------------------------+
-   | Copyright (C) 2004-2017 The Cacti Group                                 |
-   |                                                                         |
-   | This program is free software; you can redistribute it and/or           |
-   | modify it under the terms of the GNU General Public License             |
-   | as published by the Free Software Foundation; either version 2          |
-   | of the License, or (at your option) any later version.                  |
-   |                                                                         |
-   | This program is distributed in the hope that it will be useful,         |
-   | but WITHOUT ANY WARRANTY; without even the implied warranty of          |
-   | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
-   | GNU General Public License for more details.                            |
-   +-------------------------------------------------------------------------+
-   | Cacti: The Complete RRDTool-based Graphing Solution                     |
-   +-------------------------------------------------------------------------+
-   | This code is designed, written, and maintained by the Cacti Group. See  |
-   | about.php and/or the AUTHORS file for specific developer information.   |
-   +-------------------------------------------------------------------------+
-   | http://www.cacti.net/                                                   |
-   +-------------------------------------------------------------------------+
+ +-------------------------------------------------------------------------+
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
+ |                                                                         |
+ | This program is free software; you can redistribute it and/or           |
+ | modify it under the terms of the GNU General Public License             |
+ | as published by the Free Software Foundation; either version 2          |
+ | of the License, or (at your option) any later version.                  |
+ |                                                                         |
+ | This program is distributed in the hope that it will be useful,         |
+ | but WITHOUT ANY WARRANTY; without even the implied warranty of          |
+ | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
+ | GNU General Public License for more details.                            |
+ +-------------------------------------------------------------------------+
+ | Cacti: The Complete RRDtool-based Graphing Solution                     |
+ +-------------------------------------------------------------------------+
+ | This code is designed, written, and maintained by the Cacti Group. See  |
+ | about.php and/or the AUTHORS file for specific developer information.   |
+ +-------------------------------------------------------------------------+
+ | http://www.cacti.net/                                                   |
+ +-------------------------------------------------------------------------+
 */
 
-chdir('../../');
+chdir(__DIR__ . '/../../');
+require('include/auth.php');
 
-include_once('./include/auth.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/funct_validate.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/funct_html.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/funct_online.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/funct_calculate.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/funct_shared.php');
-include_once(REPORTIT_BASE_PATH . '/lib_int/const_measurands.php');
+if (!defined('REPORTIT_BASE_PATH')) {
+	include_once(__DIR__ . '/setup.php');
+	reportit_define_constants();
+}
+
+include_once(REPORTIT_BASE_PATH . '/lib/funct_validate.php');
+include_once(REPORTIT_BASE_PATH . '/lib/funct_html.php');
+include_once(REPORTIT_BASE_PATH . '/lib/funct_online.php');
+include_once(REPORTIT_BASE_PATH . '/lib/funct_calculate.php');
+include_once(REPORTIT_BASE_PATH . '/lib/funct_shared.php');
+include_once(REPORTIT_BASE_PATH . '/lib/const_measurands.php');
 
 $measurand_actions 	= array(
 	2 => __('Delete', 'reportit')
@@ -66,12 +71,12 @@ function standard() {
 	/* ==================================================== */
 
 	$measurands_list = db_fetch_assoc_prepared('SELECT *
-		FROM reportit_measurands
+		FROM plugin_reportit_measurands
 		WHERE template_id = ?
 		ORDER BY id', array(get_request_var('id')));
 
 	$template_name	= db_fetch_cell_prepared('SELECT description
-		FROM reportit_templates
+		FROM plugin_reportit_templates
 		WHERE id = ?',
 		array(get_request_var('id')));
 
@@ -81,6 +86,7 @@ function standard() {
 	$number_of_measurands = count($measurands_list);
 	$header_label	= __("Measurands [Template: <a class='linkEditMain' href='templates.php?action=template_edit&id=" . get_request_var('id') . "'>%s</a>] [%d]", $template_name, $number_of_measurands, 'reportit');
 
+	form_start('measurands.php');
 	html_start_box($header_label, '100%', '', '2', 'center', 'measurands.php?action=measurand_edit&template_id=' . get_request_var('id'));
 
 	$display_text = array(
@@ -128,7 +134,8 @@ function standard() {
 
 	html_end_box(true);
 
-	draw_actions_dropdown($measurand_actions, 'templates.php');
+	draw_actions_dropdown($measurand_actions, 'measurands.php');
+	form_end();
 }
 
 function form_save() {
@@ -140,7 +147,6 @@ function form_save() {
 	input_validate_input_key(get_request_var('measurand_type'), $type_specifier);
 	input_validate_input_key(get_request_var('measurand_precision'), $precision, true);
 	input_validate_input_key(get_request_var('measurand_rounding'), array(0,1,2), true);
-
 	form_input_validate(get_request_var('measurand_description'), 'measurand_description', '', false, 3);
 	form_input_validate(get_request_var('measurand_abbreviation'), 'measurand_abbreviation', '^[a-zA-Z0-9]+$', false, 3);
 	form_input_validate(get_request_var('measurand_unit'), 'measurand_unit', '^[\/\\\$a-zA-Z0-9%²³-]+$', false, 3);
@@ -150,7 +156,7 @@ function form_save() {
 
 	//Check if the abbreviation is in use.
 	$count = db_fetch_cell_prepared('SELECT COUNT(*)
-		FROM reportit_measurands
+		FROM plugin_reportit_measurands
 		WHERE abbreviation = ?
 		AND id != ?
 		AND template_id = ?',
@@ -176,17 +182,18 @@ function form_save() {
 	//Check possible dependences with other measurands
 	if (!is_error_message_field('measurand_abbreviation') && get_request_var('id') != 0) {
 		$dependences = array();
+		$dependencies = array();
 
 		$new = get_request_var('measurand_abbreviation');
 
 		$old = db_fetch_cell_prepared("SELECT abbreviation
-			FROM reportit_measurands
+			FROM plugin_reportit_measurands
 			WHERE id = ?",
 			array(get_request_var('id')));
 
 		if ($old != $new) {
 			$dependencies = db_fetch_assoc_prepared("SELECT id, calc_formula
-				FROM reportit_measurands
+				FROM plugin_reportit_measurands
 				WHERE template_id = ?
 				AND id > ?
 				AND calc_formula LIKE '%$old%'",
@@ -203,7 +210,7 @@ function form_save() {
 		//Check if interim results are used in other measurands
 		if(isset_request_var('measurand_spanned')) {
 			$count = db_fetch_cell_prepared("SELECT COUNT(*)
-				FROM reportit_measurands
+				FROM plugin_reportit_measurands
 				WHERE template_id = ?
 				AND id > ?
 				AND calc_formula LIKE '%$old:%'",
@@ -222,8 +229,8 @@ function form_save() {
 	$measurand_data['description']    = get_request_var('measurand_description');
 	$measurand_data['abbreviation']   = strtoupper(get_request_var('measurand_abbreviation'));
 	$measurand_data['unit']           = get_request_var('measurand_unit');
-	$measurand_data['visible']        = isset_request_var('measurand_visible') ? 1 : 0;
-	$measurand_data['spanned']        = isset_request_var('measurand_spanned') ? 1 : 0;
+	$measurand_data['visible']        = isset_request_var('measurand_visible') ? 'on' : '';
+	$measurand_data['spanned']        = isset_request_var('measurand_spanned') ? 'on' : '';
 	$measurand_data['calc_formula']   = get_request_var('measurand_formula');
 	$measurand_data['rounding']       = isset_request_var('measurand_rounding') ? get_request_var('measurand_rounding'): '';
 	$measurand_data['cf']             = get_request_var('measurand_cf');
@@ -234,7 +241,7 @@ function form_save() {
 		header('Location: measurands.php?header=false&action=measurand_edit&id=' . get_request_var('id') . '&template_id=' . get_request_var('template_id'));
 	} else {
 		//Save data
-		sql_save($measurand_data, 'reportit_measurands');
+		sql_save($measurand_data, 'plugin_reportit_measurands');
 
 		//Update dependences if it's necessary
 		if (isset($dependences) && sizeof($dependencies)) {
@@ -256,7 +263,7 @@ function measurand_edit() {
 
 	if (!isempty_request_var('id')) {
 		$measurand_data = db_fetch_row_prepared('SELECT *
-			FROM reportit_measurands
+			FROM plugin_reportit_measurands
 			WHERE id = ?',
 			array(get_request_var('id')));
 
@@ -267,6 +274,7 @@ function measurand_edit() {
 
 	$measurand_id		= (isset_request_var('id') ? get_request_var('id') : '0');
 	$template_id		= (isset_request_var('template_id') ? get_request_var('template_id') : $measurand_data['template_id']);
+
 
 	$form_array = array(
 		'id'				=> array(
@@ -315,15 +323,19 @@ function measurand_edit() {
 			'friendly_name'		=> __('Visible', 'reportit'),
 			'description'		=> __('Choose \'enable\' if this measurand should be become part of the final report output. Leave it unflagged if this measurands will only be used as an auxiliary calculation.', 'reportit'),
 			'method'			=> 'checkbox',
-			'value'				=> ((isset($measurand_data['visible']) || $measurand_data['visible'] == true) ? 'on' : ''),
-			'default'			=> 'on'
+			'value'				=> ((isset($measurand_data['visible']) && $measurand_data['visible'] == true) ? 'on' : ''),
+			'form_id'			=> (isset_request_var('id') ? get_request_var('id') : ''),
+			'default'			=> 'on',
+
 		),
 		'measurand_spanned'	=> array(
 			'friendly_name'		=> __('Separate', 'reportit'),
 			'description'		=> __('Choose \'enable\' if this measurand will only have one result in total instead of one for every Data Source Item. It\'s result<br>will be shown separately. Use this option in combination with "Visible" = "off" if you are looking for a measurand keeping an interim result only that should be reused within the calculation of other measurands without being visible for end users.', 'reportit'),
 			'method'			=> 'checkbox',
 			'value'				=> ((isset($measurand_data['spanned']) && $measurand_data['spanned'] == true) ? 'on' : ''),
+			'form_id'			=> (isset_request_var('id') ? get_request_var('id') : ''),
 			'default'			=> '',
+
 		),
 		'measurand_header2'	=> array(
 			'friendly_name'		=> __('Formatting', 'reportit'),
@@ -360,7 +372,7 @@ function measurand_edit() {
 			'friendly_name'		=> __('Calculation Formula', 'reportit'),
 			'description'		=> __('The mathematical definion of this measurand. Allowed are all combinations of operators and operands listed below following the rules of mathematics. Use round and square brackets to signify complex terms and the order of operations.', 'reportit'),
 			'method' 			=> 'custom',
-			'value'				=> "<input type='text' id='measurand_formula' name='measurand_formula' size='40' maxlength='200'" . (isset($measurand_data['calc_formula']) ? "value='{$measurand_data['calc_formula']}'" : "" ) . '>'
+			'value'				=> "<textarea aria-multiline='true' cols='60' rows='5' id='measurand_formula' name='measurand_formula'>" . (isset($measurand_data['calc_formula']) ? $measurand_data['calc_formula'] : "" ) . '</textarea>'
 		),
 		'measurand_ops_and_opds'=> array(
 			'friendly_name'		=> __('Operators & Operands', 'reportit'),
@@ -402,6 +414,7 @@ function measurand_edit() {
 	form_start('measurands.php');
 	html_start_box($header_label, '100%', '', '2', 'center', '');
 
+
 	draw_edit_form(
 		array(
 			'config' => array('no_form_tag' => true),
@@ -417,7 +430,7 @@ function measurand_edit() {
 	//print '<br>';
 
 	form_save_button('measurands.php?id=' . $template_id);
-	form_end();
+	//form_end();
 
 
 
@@ -453,7 +466,7 @@ function form_actions() {
 		$selected_items = unserialize(stripslashes(get_request_var('selected_items')));
 
 		if (get_request_var('drp_action') == '2') { // DELETE MEASURANDS
-			db_execute('DELETE FROM reportit_measurands WHERE ' . array_to_sql_or($selected_items, 'id'));
+			db_execute('DELETE FROM plugin_reportit_measurands WHERE ' . array_to_sql_or($selected_items, 'id'));
 
 			//Check if it is necessary to lock the report template
 			if (stat_autolock_template(get_request_var('id'))) {
@@ -466,7 +479,7 @@ function form_actions() {
 	}
 
 	//Set preconditions
-	$ds_list = ''; $i = 0;
+	$ds_list = array(); $i = 0;
 
 	foreach($_POST as $key => $value) {
 		if(strstr($key, 'chk_')) {
@@ -479,7 +492,7 @@ function form_actions() {
 
 			//Fetch report description
 			$measurand_description 	= db_fetch_cell_prepared('SELECT description
-				FROM reportit_measurands
+				FROM plugin_reportit_measurands
 				WHERE id = ?',
 				array($id));
 
@@ -489,9 +502,10 @@ function form_actions() {
 
 	top_header();
 
+	form_start('measurands.php');
+
 	html_start_box($measurand_actions[get_request_var('drp_action')], '60%', '', '3', 'center', '');
 
-	form_start('measurands.php');
 
 	if (get_request_var('drp_action') == '2') { //DELETE REPORT
 		print "<tr class='odd'>
@@ -509,7 +523,7 @@ function form_actions() {
 		print '</td>
 			</tr>';
 
-		if (!is_array($ds_list)) {
+		if (!is_array($ds_list) || empty($ds_list)) {
 			print "<tr>
 				<td class='textArea'>
 					<span class='textError'>" . __('You must select at least one measurand.', 'reportit') . '</span>
@@ -533,6 +547,8 @@ function form_actions() {
 	</tr>";
 
 	html_end_box();
+
+	form_end();
 
 	bottom_footer();
 }

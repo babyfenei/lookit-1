@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2004-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -227,6 +227,8 @@ function audit_config_insert() {
 
 		/* don't insert poller records */
 		if (strpos($_SERVER['argv'][0], 'poller') === false &&
+			strpos($_SERVER['argv'][0], 'cmd.php') === false &&
+			strpos($_SERVER['argv'][0], '/scripts/') === false &&
 			strpos($_SERVER['argv'][0], 'script_server.php') === false &&
 			strpos($_SERVER['argv'][0], '_process.php') === false) {
 			db_execute_prepared('INSERT INTO audit_log (page, user_id, action, ip_address, user_agent, event_time, post)
@@ -311,9 +313,9 @@ function audit_config_settings () {
 function audit_draw_navigation_text($nav) {
 	$nav['audit.php:'] = array(
 		'title'   => __('Audit Event Log', 'audit'),
-		'mapping' => '',
+		'mapping' => 'index.php:',
 		'url'     => 'audit.php',
-		'level'   => '0'
+		'level'   => '1'
 	);
 
 	return $nav;

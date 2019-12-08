@@ -1,6 +1,25 @@
 <?php
-/* This file was modified from the default dot1q functions provided in mactrack_functions.php
-	 specifically written and tested to work with Dell 5300 and 3400 series switches
+/*
+ +-------------------------------------------------------------------------+
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
+ |                                                                         |
+ | This program is free software; you can redistribute it and/or           |
+ | modify it under the terms of the GNU General Public License             |
+ | as published by the Free Software Foundation; either version 2          |
+ | of the License, or (at your option) any later version.                  |
+ |                                                                         |
+ | This program is distributed in the hope that it will be useful,         |
+ | but WITHOUT ANY WARRANTY; without even the implied warranty of          |
+ | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
+ | GNU General Public License for more details.                            |
+ +-------------------------------------------------------------------------+
+ | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ +-------------------------------------------------------------------------+
+ | This code is designed, written, and maintained by the Cacti Group. See  |
+ | about.php and/or the AUTHORS file for specific developer information.   |
+ +-------------------------------------------------------------------------+
+ | http://www.cacti.net/                                                   |
+ +-------------------------------------------------------------------------+
 */
 
 /* register this functions scanning functions */
@@ -25,17 +44,17 @@ function get_dell_dot1q_switch_ports($site, &$device, $lowPort = 0, $highPort = 
 	$ifIndexes = xform_standard_indexed_data(".1.3.6.1.2.1.2.2.1.1", $device);
 	mactrack_debug("ifIndexes data collection complete");
 
-	$ifInterfaces = build_InterfacesTable($device, $ifIndexes, TRUE, TRUE);
+	$ifInterfaces = build_InterfacesTable($device, $ifIndexes, true, true);
 
 	/* sanitize ifInterfaces by removing text from ifType field */
-	if (sizeof($ifInterfaces)) {
-	foreach($ifInterfaces as $key => $tempInterfaces){
+	if (cacti_sizeof($ifInterfaces)) {
+	foreach ($ifInterfaces as $key => $tempInterfaces){
 		preg_match("/[0-9]{1,3}/", $tempInterfaces["ifType"], $newType);
 		$ifInterfaces[$key]["ifType"] = $newType[0];
 	}
 	}
 
-	get_base_dell_dot1qFdb_ports($site, $device, $ifInterfaces, "", TRUE, $lowPort, $highPort);
+	get_base_dell_dot1qFdb_ports($site, $device, $ifInterfaces, "", true, $lowPort, $highPort);
 
 	return $device;
 }
@@ -45,7 +64,7 @@ function get_dell_dot1q_switch_ports($site, &$device, $lowPort = 0, $highPort = 
   This was mainly copied from the default dot1q function in mactrack_functions.php
   but was modified to work with Dell switches
 */
-function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = TRUE, $lowPort = 1, $highPort = 9999) {
+function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = true, $lowPort = 1, $highPort = 9999) {
 	global $debug, $scan_date;
 
 	/* initialize variables */
@@ -64,16 +83,16 @@ function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_rea
 	$indexes = array_keys($active_ports_array);
 
 	/* Sanitize active ports array, removing text junk as the dell's don't return just a plain numeric value */
-	if (sizeof($active_ports_array)) {
-	foreach($active_ports_array as $key => $tempPorts){
+	if (cacti_sizeof($active_ports_array)) {
+	foreach ($active_ports_array as $key => $tempPorts){
 		preg_match("/[0-9]{1,3}/",$tempPorts,$newStatus);
 		$active_ports_array[$key]=$newStatus[0];
 	}
 	}
 
 	$i = 0;
-	if (sizeof($active_ports_array)) {
-	foreach($active_ports_array as $port_info) {
+	if (cacti_sizeof($active_ports_array)) {
+	foreach ($active_ports_array as $port_info) {
 		if ((($ifInterfaces[$indexes[$i]]["ifType"] >= 6) &&
 			($ifInterfaces[$indexes[$i]]["ifType"] <= 9)) ||
 			($ifInterfaces[$indexes[$i]]["ifType"] == 71)) {
@@ -103,12 +122,13 @@ function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_rea
 
 		$port_status = xform_stripped_oid(".1.3.6.1.2.1.17.7.1.2.2.1.3", $device, $snmp_readstring);
 		/* Sanitize port_status array, removing text junk as the dell's don't return just a plain numeric value*/
-		if (sizeof($port_status)) {
-		foreach($port_status as $key => $tempStatus){
-			preg_match("/[0-9]{1,3}/",$tempStatus,$newStatus);
-			$port_status[$key]=$newStatus[0];
+		if (cacti_sizeof($port_status)) {
+			foreach ($port_status as $key => $tempStatus){
+				preg_match("/[0-9]{1,3}/",$tempStatus,$newStatus);
+				$port_status[$key]=$newStatus[0];
+			}
 		}
-		}
+
 		//print_r($port_status);
 		/* get device active port numbers
 		This is the OID that shows the mac address as the index and the port as the value*/
@@ -129,63 +149,63 @@ function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_rea
 		   a new array.
 		*/
 		$i = 0;
-		if (sizeof($port_numbers)) {
-		foreach ($port_numbers as $key => $port_number) {
-			if (($highPort == 0) ||
-				(($port_number >= $lowPort) &&
-				($port_number <= $highPort) &&
-				($bridge_root_port != $port_number))) {
+		if (cacti_sizeof($port_numbers)) {
+			foreach ($port_numbers as $key => $port_number) {
+				if (($highPort == 0) ||
+					(($port_number >= $lowPort) &&
+					($port_number <= $highPort) &&
+					($bridge_root_port != $port_number))) {
 
-				if (!in_array($port_number, $ignore_ports)) {
-					if ((@$port_status[$key] == "3") || (@$port_status[$key] == "5")) {
-						$port_key_array[$i]["key"] = $key;
-						$port_key_array[$i]["port_number"] = $port_number;
+					if (!in_array($port_number, $ignore_ports)) {
+						if ((@$port_status[$key] == "3") || (@$port_status[$key] == "5")) {
+							$port_key_array[$i]["key"] = $key;
+							$port_key_array[$i]["port_number"] = $port_number;
 
-						$i++;
+							$i++;
+						}
 					}
 				}
 			}
-		}
 		}
 
 		/* compare the user ports to the brige port data, store additional
 		   relevant data about the port.
 		*/
 		$i = 0;
-		if (sizeof($port_key_array)) {
-		foreach ($port_key_array as $port_key) {
-			/* map bridge port to interface port and check type */
-			if ($port_key["port_number"] > 0) {
-				if (sizeof($bridgePortIfIndexes) != 0) {
-					$brPortIfIndex = @$bridgePortIfIndexes[$port_key["port_number"]];
-					$brPortIfType = @$ifInterfaces[$brPortIfIndex]["ifType"];
-				}else{
-					$brPortIfIndex = $port_key["port_number"];
-					$brPortIfType = @$ifInterfaces[$port_key["port_number"]]["ifType"];
-				}
+		if (cacti_sizeof($port_key_array)) {
+			foreach ($port_key_array as $port_key) {
+				/* map bridge port to interface port and check type */
+				if ($port_key["port_number"] > 0) {
+					if (cacti_sizeof($bridgePortIfIndexes) != 0) {
+						$brPortIfIndex = @$bridgePortIfIndexes[$port_key["port_number"]];
+						$brPortIfType = @$ifInterfaces[$brPortIfIndex]["ifType"];
+					} else {
+						$brPortIfIndex = $port_key["port_number"];
+						$brPortIfType = @$ifInterfaces[$port_key["port_number"]]["ifType"];
+					}
 
-				if ((($brPortIfType >= 6) && ($brPortIfType <= 9)) || ($brPortIfType == 71)) {
-					/* set some defaults  */
-					$new_port_key_array[$i]["vlan_id"] = "N/A";
-					$new_port_key_array[$i]["vlan_name"] = "N/A";
-					$new_port_key_array[$i]["mac_address"] = "NOT USER";
-					$new_port_key_array[$i]["port_number"] = "NOT USER";
-					$new_port_key_array[$i]["port_name"] = "N/A";
+					if ((($brPortIfType >= 6) && ($brPortIfType <= 9)) || ($brPortIfType == 71)) {
+						/* set some defaults  */
+						$new_port_key_array[$i]["vlan_id"] = "N/A";
+						$new_port_key_array[$i]["vlan_name"] = "N/A";
+						$new_port_key_array[$i]["mac_address"] = "NOT USER";
+						$new_port_key_array[$i]["port_number"] = "NOT USER";
+						$new_port_key_array[$i]["port_name"] = "N/A";
 
-					/* now set the real data */
-					$new_port_key_array[$i]["key"] = $port_key["key"];
-					$new_port_key_array[$i]["port_number"] = $port_key["port_number"];
-					$new_port_key_array[$i]["port_name"] = $ifInterfaces[$port_key["port_number"]]["ifAlias"];
-					$i++;
+						/* now set the real data */
+						$new_port_key_array[$i]["key"] = $port_key["key"];
+						$new_port_key_array[$i]["port_number"] = $port_key["port_number"];
+						$new_port_key_array[$i]["port_name"] = $ifInterfaces[$port_key["port_number"]]["ifAlias"];
+						$i++;
+					}
 				}
 			}
-		}
 		}
 		mactrack_debug("Port number information collected.");
 
 		/* map mac address */
 		/* only continue if there were user ports defined */
-		if (sizeof($new_port_key_array)) {
+		if (cacti_sizeof($new_port_key_array)) {
 			foreach ($new_port_key_array as $key => $port_mac) {
 				$new_port_key_array[$key]["mac_address"] = dell_mac_address_convert($port_mac["key"]);
 				mactrack_debug("INDEX: '". $key . "' MAC ADDRESS: " . $new_port_key_array[$key]["mac_address"]);
@@ -196,36 +216,36 @@ function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_rea
 
 
 			/* map pvid's to ports with vlan names*/
-			if (sizeof($new_port_key_array)) {
-			foreach ($new_port_key_array as $key => $port){
-				$temp_array = explode(".", $port["key"]);
-				$new_port_key_array[$key]["vlan_id"] = $temp_array[0];
-				$new_port_key_array[$key]["vlan_name"] = @$vlan_names[$new_port_key_array[$key]["vlan_id"]];
-			}
+			if (cacti_sizeof($new_port_key_array)) {
+				foreach ($new_port_key_array as $key => $port){
+					$temp_array = explode(".", $port["key"]);
+					$new_port_key_array[$key]["vlan_id"] = $temp_array[0];
+					$new_port_key_array[$key]["vlan_name"] = @$vlan_names[$new_port_key_array[$key]["vlan_id"]];
+				}
 			}
 			mactrack_debug("Port mac address information collected.");
-		}else{
+		} else {
 			mactrack_debug("No user ports on this network.");
 		}
-	}else{
+	} else {
 		mactrack_debug("No user ports on this network.");
 	}
 
 	if ($store_to_db) {
 		if ($ports_active <= 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
-		}elseif (sizeof($new_port_key_array) > 0) {
+		} elseif (cacti_sizeof($new_port_key_array) > 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
 			$device["macs_active"] = sizeof($new_port_key_array);
 			db_store_device_port_results($device, $new_port_key_array, $scan_date);
-		}else{
+		} else {
 			$device["last_runmessage"] = "WARNING: Poller did not find active ports on this device.";
 		}
 
-		if(!$debug) {
+		if (!$debug) {
 			print(" - Complete\n");
 		}
-	}else{
+	} else {
 		return $new_port_key_array;
 	}
 }
@@ -233,18 +253,20 @@ function get_base_dell_dot1qFdb_ports($site, &$device, &$ifInterfaces, $snmp_rea
 function dell_mac_address_convert($mac_address) {
 	if (strlen($mac_address) == 0) {
 		$mac_address = "NOT USER";
-	}elseif (strlen($mac_address) > 10) { /* return is in ascii */
+	} elseif (strlen($mac_address) > 10) { /* return is in ascii */
 		$mac_address = trim(str_replace("\"", "", $mac_address));
 		$mac_address = str_replace(".", read_config_option("mt_mac_delim"), $mac_address);
 		$mac_address = str_replace(":", read_config_option("mt_mac_delim"), $mac_address);
 		$mac = explode(read_config_option("mt_mac_delim"),$mac_address);
+
 		foreach ($mac as $key => $mac_item){
 			$mac_item = dechex($mac_item);
-			if(strlen($mac_item) < 2){
+			if (strlen($mac_item) < 2){
 				$mac_item = "0".$mac_item;
 			}
 			$mac[$key] = strtoupper($mac_item);
 		}
+
 		$new_mac = "";
 		for($i = 1; $i < 6; $i++){
 			$new_mac .= $mac[$i].read_config_option("mt_mac_delim");

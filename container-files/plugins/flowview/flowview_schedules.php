@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2008-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -109,18 +109,16 @@ switch (get_request_var('action')) {
 		actions_schedules();
 		break;
 	case 'save':
-		save_schedules ();
+		save_schedules();
 		break;
 	case 'edit':
-		general_header();
-		display_tabs ();
+		top_header();
 		edit_schedule();
 		bottom_footer();
 		break;
 	default:
-		general_header();
-		display_tabs ();
-		show_schedules ();
+		top_header();
+		show_schedules();
 		bottom_footer();
 		break;
 }
@@ -163,7 +161,7 @@ function actions_schedules () {
 	$schedule_list = '';
 
 	/* loop through each of the devices selected on the previous page and get more info about them */
-	while (list($var,$val) = each($_POST)) {
+	foreach($_POST as $var => $val) {
 		if (preg_match('/^chk_([0-9]+)$/', $var, $matches)) {
 			/* ================= input validation ================= */
 			input_validate_input_number($matches[1]);
@@ -221,7 +219,7 @@ function actions_schedules () {
 	}
 
 	print "<tr>
-		<td colspan='2' align='right' class='saveRow'>
+		<td colspan='2' class='saveRow'>
 			<input type='hidden' name='action' value='actions'>
 			<input type='hidden' name='selected_items' value='" . (isset($schedule_array) ? serialize($schedule_array) : '') . "'>
 			<input type='hidden' name='drp_action' value='" . get_nfilter_request_var('drp_action') . "'>
@@ -368,10 +366,9 @@ function show_schedules () {
 			'default' => '1'
 			),
 		'filter' => array(
-			'filter' => FILTER_CALLBACK,
+			'filter' => FILTER_DEFAULT,
 			'pageset' => true,
-			'default' => '',
-			'options' => array('options' => 'sanitize_search_string')
+			'default' => ''
 			),
 		'sort_column' => array(
 			'filter' => FILTER_CALLBACK,
@@ -405,7 +402,7 @@ function show_schedules () {
 						<?php print __('Search', 'flowview');?>
 					</td>
 					<td>
-						<input type='text' id='filter' size='25' value='<?php print htmlspecialchars(get_request_var('filter'));?>'>
+						<input type='text' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
 					</td>
 					<td>
 						<?php print __('Schedules', 'flowview');?>
@@ -465,7 +462,7 @@ function show_schedules () {
 	html_end_box();
 
 	if (get_request_var('filter') != '') {
-		$sql_where = "WHERE (name LIKE '%" . get_request_var_request('filter') . "%')";
+		$sql_where = 'WHERE name LIKE ' . db_qstr('%' . get_request_var_request('filter') . '%');
 	}else{
 		$sql_where = '';
 	}

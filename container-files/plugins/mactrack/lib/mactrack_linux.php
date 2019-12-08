@@ -1,6 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
+ | Copyright (C) 2004-2019 The Cacti Group                                 |
  | Copyright (C) 2009 Susanin (gthe)                                       |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
@@ -13,8 +14,14 @@
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           |
  | GNU General Public License for more details.                            |
  +-------------------------------------------------------------------------+
+ | Cacti: The Complete RRDTool-based Graphing Solution                     |
+ +-------------------------------------------------------------------------+
+ | This code is designed, written, and maintained by the Cacti Group. See  |
+ | about.php and/or the AUTHORS file for specific developer information.   |
+ +-------------------------------------------------------------------------+
+ | http://www.cacti.net/                                                   |
+ +-------------------------------------------------------------------------+
 */
-
 
 /* register this functions scanning functions */
 if (!isset($mactrack_scanning_functions)) { $mactrack_scanning_functions = array(); }
@@ -44,16 +51,16 @@ function get_linux_switch_ports($site, &$device, $lowPort = 0, $highPort = 0) {
 	/* get the ifNames for the device */
 	$ifNames = xform_standard_indexed_data(".1.3.6.1.2.1.2.2.1.2", $device);
 	mactrack_debug("ifNames data collection complete.");
-	
+
 	foreach($ifNames as $ifkey => $value) {
 		if (substr_count($value, ".") > 0 ){
 			$ifVlan[$ifkey] = substr($value, strpos($value, ".")+1);
-		}else{
+		} else {
 			$ifVlan[$ifkey] = "N/A";
 		}
 	}
-	
-	
+
+
 	/* get ports that happen to be link ports */
 	$link_ports = get_link_port_status($device);
 	mactrack_debug("ipAddrTable scanning for link ports data collection complete.");
@@ -61,13 +68,13 @@ function get_linux_switch_ports($site, &$device, $lowPort = 0, $highPort = 0) {
 	foreach($ifIndexes as $ifIndex) {
 		$ifInterfaces[$ifIndex]["ifIndex"] = $ifIndex;
 		$ifInterfaces[$ifIndex]["ifName"] = @$ifNames[$ifIndex];
-		$ifInterfaces[$ifIndex]["ifType"] = convert_port_state_data($ifTypes[$ifIndex]);  
+		$ifInterfaces[$ifIndex]["ifType"] = convert_port_state_data($ifTypes[$ifIndex]);
 		$ifInterfaces[$ifIndex]["vlan_id"] = $ifVlan[$ifIndex];
 		//$ifInterfaces[$ifIndex]["linkPort"] = @$link_ports[$ifIndex];
 	}
 	mactrack_debug("ifInterfaces assembly complete.");
 
-	get_linux_dot1dTpFdbEntry_ports($site, $device, $ifInterfaces, "", TRUE, $lowPort, $highPort);
+	get_linux_dot1dTpFdbEntry_ports($site, $device, $ifInterfaces, "", true, $lowPort, $highPort);
 
 	return $device;
 }
@@ -76,7 +83,7 @@ function get_linux_switch_ports($site, &$device, $lowPort = 0, $highPort = 0) {
   port bridge snmp table and return it to the calling progrem for further processing.
   This is a foundational function for all vendor data collection functions.
 */
-function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = TRUE, $lowPort = 1, $highPort = 9999) {
+function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_readstring = "", $store_to_db = true, $lowPort = 1, $highPort = 9999) {
 	global $debug, $scan_date;
 
 	/* initialize variables */
@@ -127,10 +134,10 @@ function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_
 		$bridgePortIfIndexes = xform_standard_indexed_data(".1.3.6.1.2.1.2.2.1.1", $device, $snmp_readstring);
 
 		$port_status = xform_stripped_oid(".1.3.6.1.2.1.4.22.1.4", $device, $snmp_readstring);
-        foreach ($port_status as $key_status => $status_value) { 
+        foreach ($port_status as $key_status => $status_value) {
             $port_status[$key_status]=convert_port_state_data($status_value);
         }
-        
+
 		/* get device active port numbers */
 		$port_numbers = xform_stripped_oid(".1.3.6.1.2.1.4.22.1.1", $device, $snmp_readstring);
 
@@ -164,18 +171,18 @@ function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_
 		foreach ($port_key_array as $port_key) {
 			/* map bridge port to interface port and check type */
 			if ($port_key["port_number"] > 0) {
-				if (sizeof($bridgePortIfIndexes) != 0) {
+				if (cacti_sizeof($bridgePortIfIndexes) != 0) {
 					/* some hubs do not always return a port number in the bridge table.
 					   test for it by isset and substiture the port number from the ifTable
 					   if it isnt in the bridge table
 					*/
 					if (isset($bridgePortIfIndexes[$port_key["port_number"]])) {
 						$brPortIfIndex = @$bridgePortIfIndexes[$port_key["port_number"]];
-					}else{
+					} else {
 						$brPortIfIndex = @$port_key["port_number"];
 					}
 					$brPortIfType = @$ifInterfaces[$brPortIfIndex]["ifType"];
-				}else{
+				} else {
 					$brPortIfIndex = $port_key["port_number"];
 					$brPortIfType = @$ifInterfaces[$port_key["port_number"]]["ifType"];
 				}
@@ -202,9 +209,9 @@ function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_
 
 		/* map mac address */
 		/* only continue if there were user ports defined */
-		if (sizeof($new_port_key_array) > 0) {
+		if (cacti_sizeof($new_port_key_array) > 0) {
 			/* get the bridges active MAC addresses */
-			$port_macs = xform_stripped_oid(".1.3.6.1.2.1.4.22.1.2", $device, $snmp_readstring);
+			$port_macs = xform_stripped_oid(".1.3.6.1.2.1.4.22.1.2", $device, $snmp_readstring, true);
 
 			foreach ($port_macs as $key => $port_mac) {
 				$port_macs[$key] = xform_mac_address($port_mac);
@@ -216,28 +223,28 @@ function get_linux_dot1dTpFdbEntry_ports($site, &$device, &$ifInterfaces, $snmp_
 			}
 
 			mactrack_debug("Port mac address information collected.");
-		}else{
+		} else {
 			mactrack_debug("No user ports on this network.");
 		}
-	}else{
+	} else {
 		mactrack_debug("No user ports on this network.");
 	}
 
 	if ($store_to_db) {
 		if ($ports_active <= 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
-		}elseif (sizeof($new_port_key_array) > 0) {
+		} elseif (cacti_sizeof($new_port_key_array) > 0) {
 			$device["last_runmessage"] = "Data collection completed ok";
 			$device["macs_active"] = sizeof($new_port_key_array);
 			db_store_device_port_results($device, $new_port_key_array, $scan_date);
-		}else{
+		} else {
 			$device["last_runmessage"] = "WARNING: Poller did not find active ports on this device.";
 		}
 
-		if(!$debug) {
+		if (!$debug) {
 			print(" - Complete\n");
 		}
-	}else{
+	} else {
 		return $new_port_key_array;
 	}
 }
@@ -247,11 +254,11 @@ function convert_port_state_data($old_port_type) {
 			$pos1 = strpos($old_port_type, "(");
 			$pos2 = strpos($old_port_type, ")");
 			$rezult = substr($old_port_type, $pos1+1, $pos2-$pos1-1);
-		} else{
+		} else {
 			$rezult=$old_port_type;
 		}
-		
-return $rezult;  
+
+return $rezult;
 }
 
 ?>

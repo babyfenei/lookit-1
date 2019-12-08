@@ -1,8 +1,7 @@
 <?php
 /*
- ex: set tabstop=4 shiftwidth=4 autoindent:
  +-------------------------------------------------------------------------+
- | Copyright (C) 2007-2017 The Cacti Group                                 |
+ | Copyright (C) 2007-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -23,16 +22,7 @@
  +-------------------------------------------------------------------------+
 */
 
-/* do NOT run this script through a web browser */
-if (!isset($_SERVER["argv"][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($_SERVER['REMOTE_ADDR'])) {
-   die("<br><strong>This script is only meant to run at the command line.</strong>");
-}
-
-$no_http_headers = true;
-
-error_reporting(E_ALL);
-
-include_once(dirname(__FILE__) . "/../../../include/global.php");
+include_once(dirname(__FILE__) . "/../../../include/cli_check.php");
 
 // Get the current users
 $users = db_fetch_assoc("SELECT id FROM user_auth");
@@ -46,9 +36,15 @@ print "Found " . count($users) . " users\n";
 
 // Loop through and update each users permissions
 print "Updating Realm Permissions\n";
+
 foreach ($users as $user) {
 	print ".";
 	$u = $user['id'];
-	db_execute("REPLACE INTO user_auth_realm (realm_id, user_id) VALUES ($realm, $u)");
+	db_execute_prepared('REPLACE INTO user_auth_realm
+		(realm_id, user_id) VALUES
+		(?, ?)',
+		array($realm, $u));
 }
+
 print "\n";
+

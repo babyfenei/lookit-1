@@ -3,6 +3,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceDownFull {
@@ -10,6 +11,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceUnknownFull {
@@ -17,6 +19,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceDisabledFull {
@@ -24,6 +27,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceRecoveringFull {
@@ -31,6 +35,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceErrorFull {
@@ -38,6 +43,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .deviceNotMonFull {
@@ -45,63 +51,79 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdAlertNotify {
 	background-color: #F21924;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdAlert2Warn {
 	background-color: #F21620;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdWarningNotify {
 	background-color: #FB4A14;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
+}
+
+.tholdReTriggerNotify {
+	background-color: #F24010;
+	text-align: center;
+	white-space: nowrap;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdReTriggerEvent {
 	background-color: #FF7A30;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdTriggerEvent {
 	background-color: #FAFD9E;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdWarnTrigger {
-	background-color: #F9#FA90;
+	background-color: #F9FA90;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
-
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdRestoralNotify {
 	background-color: #CCFFCC;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdRestoralEvent {
 	background-color: #CDCFC4;
 	text-align: center;
 	white-space: nowrap;
-	width: 12.5%;
+	width: 11.11%;
+	padding: 3px;
 }
 
 .tholdRestore {
@@ -109,6 +131,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdAlertTrigger {
@@ -116,6 +139,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdReTrigger {
@@ -123,6 +147,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdWarning {
@@ -130,6 +155,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdAlert {
@@ -137,6 +163,19 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
+}
+
+.tholdAckCol {
+	background-color: #BA55D3;
+}
+
+.tholdAcknowledgment {
+	background-color: #BA55D3;
+	text-align: center;
+	white-space: nowrap;
+	width: 14%;
+	padding: 3px;
 }
 
 .tholdBaseAlert {
@@ -144,6 +183,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdNotice {
@@ -151,6 +191,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdOk {
@@ -158,6 +199,7 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 
 .tholdDisabled {
@@ -165,5 +207,6 @@
 	text-align: center;
 	white-space: nowrap;
 	width: 14%;
+	padding: 3px;
 }
 

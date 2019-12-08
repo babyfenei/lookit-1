@@ -1,7 +1,7 @@
 <?php
 /*
  +-------------------------------------------------------------------------+
- | Copyright (C) 2008-2017 The Cacti Group                                 |
+ | Copyright (C) 2008-2019 The Cacti Group                                 |
  |                                                                         |
  | This program is free software; you can redistribute it and/or           |
  | modify it under the terms of the GNU General Public License             |
@@ -27,107 +27,332 @@ if (!isset($_SERVER['argv'][0]) || isset($_SERVER['REQUEST_METHOD'])  || isset($
 	die('<br><strong>This script is only meant to run at the command line.</strong>');
 }
 
+routerconfigs_define_exit('EXIT_UNKNOWN',-1, "ERROR: Failed due to unknown reason\n");
+routerconfigs_define_exit('EXIT_NORMAL',  0, "");
+routerconfigs_define_exit('EXIT_ARGERR',  1, "ERROR: Invalid Argument (%s)\n\n");
+routerconfigs_define_exit('EXIT_NONNUM',  2, "ERROR: Argument is not numeric (%s)\n\n");
+routerconfigs_define_exit('EXIT_ARGMIS',  3, "ERROR: Argument requires value (%s)\n\n");
+
 /* We are not talking to the browser */
 $no_http_headers = true;
 
 $dir = dirname(__FILE__);
+chdir($dir);
+
 if (strpos($dir, 'plugins') !== false) {
 	chdir('../../');
 }
 
+$shortOpts = 'VvH:h:DdBbRrFf';
+$longOpts  = array(
+	'device:',
+	'devices:',
+	'debug',
+	'debug-buffer',
+	'retry',
+	'force',
+	'version',
+	'help',
+	'simulate-schedule'
+);
+
+$remaing = '';
+$options = routerconfigs_getopts($shortOpts, $longOpts, $remaining);
+
 include('./include/global.php');
-include_once($config['base_path'] . '/plugins/routerconfigs/functions.php');
+include_once(__DIR__ . '/include/functions.php');
 
 error_reporting(E_ALL ^ E_DEPRECATED);
 
-/* let PHP run just as long as it has to */
-ini_set('max_execution_time', '0');
-ini_set('memory_limit', '256M');
+/* setup defaults */
+$retryMode = false;
+$debugBuffer = false;
+$debug = false;
+$force = false;
+$devices = array();
+$simulate = false;
 
-db_execute("REPLACE INTO settings
-	(name, value) VALUES
-	('plugin_routerconfigs_running', 1)");
+foreach($options as $arg => $value) {
+	switch ($arg) {
+		case 'h':
+		case 'host':
+		case 'hosts':
+		case 'device':
+		case 'devices':
+			if (!is_array($value)) {
+				$value = array($value);
+			}
 
-$t = $stime = time();
-$devices = db_fetch_assoc("SELECT *
-	FROM plugin_routerconfigs_devices
-	WHERE enabled = 'on'
-	AND ((($t - lastbackup) - (schedule * 86400)) > -3600)");
+			foreach ($value as $deviceId) {
+				$deviceIds = explode(',',$deviceId);
+				foreach ($deviceIds as $deviceId) {
+					if (!is_numeric($deviceId)) {
+						routerconfigs_fail(EXIT_NONNUM, $deviceId);
+					}
+					//echo "Adding device $deviceId\n";
+					$devices[] = $deviceId;
+				}
+			}
+			break;
+		case 'd':
+		case 'debug':
+			$debug = true;
+			break;
+		case 'b':
+		case 'debug-buffer':
+			$debug = true;
+			$debugBuffer = true;
+			break;
+		case 'simulate-schedule':
+			$simulate = true;
+			break;
+		case 'f':
+		case 'force':
+			$force = true;
+			break;
+		case 'q':
+		case 'quiet':
+			$debug = false;
+			$debugBuffer = false;
+			$quiet = true;
+			break;
+		case 'r':
+		case 'retry':
+			$retryMode = true;
+			break;
+		default:
+			routerconfigs_fail(EXIT_ARGERR, $arg, true);
+	}
+}
 
-$failed = array();
-if (sizeof($devices)) {
-	foreach ($devices as $device) {
-		cacti_log("NOTE: Backing up config at " . time() . ' for device ' . $device['hostname'] , false, 'RCONFIG');
-		echo 'Processing ' . $device['hostname'] . "\n";
+if (strlen($remaining)) {
+	routerconfigs_fail(EXIT_ARGERR, $remaining, true);
+}
 
-		plugin_routerconfigs_download_config($device);
+$devices = array_unique($devices);
+plugin_routerconfigs_download($retryMode, $force, $devices, $debugBuffer, $simulate);
+exit(EXIT_NORMAL);
 
-		// Check for failed Backup
-		$t = time() - 120;
-		$f = db_fetch_assoc_prepared('SELECT *
-			FROM plugin_routerconfigs_backups
-			WHERE btime > ?
-			AND device = ?',
-			array($t, $device['id']));
+function routerconfigs_fail($exit_value,$args = array(),$display_help = 0) {
+	global $quiet,$fail_msg;
 
-		if (empty($f)) {
-			$device = db_fetch_row_prepared('SELECT *
-				FROM plugin_routerconfigs_devices
-				WHERE id = ?',
-				array($device['id']));
-
-			$failed[] = array ('hostname' => $device['hostname'], 'lasterror' => $device['lasterror']);
+	if (!$quiet) {
+		if (!isset($args)) {
+			$args = array();
+		} else if (!is_array($args)) {
+			$args = array($args);
 		}
 
-		sleep(10);
-	}
-} else {
-	db_execute("REPLACE INTO settings
-		(name, value) VALUES
-		('plugin_routerconfigs_running', 0)");
+		if (!array_key_exists($exit_value,$fail_msg)) {
+			$format = $fail_msg[EXIT_UNKNOWN];
+		} else {
+			$format = $fail_msg[$exit_value];
+		}
+		call_user_func_array('printf', array_merge((array)$format, $args));
 
-	return;
-}
-
-$success = count($devices) - count($failed);
-$cfailed = count($failed);
-
-cacti_log("NOTE: $success Devices Backed Up and $cfailed Devices Failed in " . time() - $stime . ' seconds', true, 'RCONFIG');
-
-/* print out failures */
-$message  = __('%s devices backed up successfully.<br>', $success, 'routerconfigs');
-$message .= __('%s devices failed to backup.<br>', $cfailed, 'routerconfigs');
-
-if (!empty($failed)) {
-	$message .= __('These devices failed to backup<br>', 'routerconfigs');
-	$message .= __('--------------------------------<br>', 'routerconfigs');
-	foreach ($failed as $f) {
-		$message .= $f['hostname'] . ' - ' . $f['lasterror'] . '<br>';
-	}
-}
-
-echo $message;
-
-$from_email = read_config_option('settings_from_email');
-$from_name  = read_config_option('settings_from_name');
-$to         = read_config_option('routerconfigs_email');
-
-if ($to != '' && $from_email != '') {
-	if ($from_name == '') {
-		$from_name = 'Config Backups';
+		if ($display_help) {
+//			display_help();
+		}
 	}
 
-	$from[0] = $from_email;
-	$from[1] = $from_name;
-	$subject = __('Network Device Configuration Backups', 'routerconfigs');
-
-	 mailer($from, $to, $cc, '', '', $subject, $message);
+	exit($exit_value);
 }
 
-/* remove old backups */
-plugin_routerconfigs_retention ();
+function routerconfigs_define_exit($name, $value, $text) {
+	global $fail_msg;
 
-db_execute("REPLACE INTO settings
-	(name, value) VALUES
-	('plugin_routerconfigs_running', 0)");
+	if (!isset($fail_msg)) {
+		$fail_msg = array();
+	}
 
+	define($name,$value);
+	$fail_msg[$name] = $text;
+	$fail_msg[$value] = $text;
+}
+
+function routerconfigs_getopts($short, $long, &$remaining = null) {
+	$remaining = '';
+	$argv = $_SERVER['argv'];
+	$argc = $_SERVER['argc'];
+	$result = array();
+
+	$options = array();
+	routerconfigs_getopts_short($options, $short);
+	routerconfigs_getopts_long($options, $long);
+
+	$ignoreOptions = false;
+	for ($loop = 1; $loop < $argc; $loop++) {
+		$name = null;
+		$value = null;
+
+		$arg = $argv[$loop];
+		if ($arg == '--') {
+			$ignoreOptions = true;
+		} else {
+			$option = $ignoreOptions ? null : routerconfigs_getopts_find($arg, $options);
+			if ($option != null)
+			{
+				if ($option['value']) {
+					if (!isset($option['result']) && $loop < $argc -1) {
+						$option2 = routerconfigs_getopts_find($argv[$loop+1], $options);
+						if ($option2 == null ) {
+							$option['result'] = $argv[$loop+1];
+							$loop++;
+						}
+					}
+
+					if (!$option['optional'] && !isset($option['result'])) {
+						routerconfigs_fail(EXIT_ARGMIS,$option['text']);
+					}
+				}
+
+				$name = $option['text'];
+				$value = isset($option['result']) ? $option['result'] : '';
+				if (array_key_exists($name, $result)) {
+					$result_val = $result[$name];
+					if (!is_array($result_val)) {
+						$result_val = array($result_val);
+					}
+
+					$result_val[] = $value;
+				} else {
+					$result_val = $value;
+				}
+
+				$result[$name] = $result_val;
+			} else {
+				$remaining .= (strlen($remaining)?' ':'') . $arg;
+			}
+		}
+	}
+
+	return $result;
+}
+
+function routerconfigs_getopts_long(array &$options, array &$long) {
+	if (isset($long)) {
+		if (!is_array($long)) {
+			$long = array($long);
+		}
+
+		if (sizeof($long)) {
+			$index = 0;
+			foreach ($long as $long_text) {
+				$long_text = trim($long_text);
+				if (strlen($long_text) == 0 || !preg_match("~[A-Za-z0-9:\-]~", $long_text)) {
+					routerconfigs_fail(EXIT_OPTERR,$long_text);
+				}
+
+				$long_val  = routerconfigs_checkopt_string('value',$long_text);
+				$long_opt  = routerconfigs_checkopt_string('optional',$long_text);
+
+
+				if ($long_opt) $long_text = substr($long_text, 0, -1);
+
+				routerconfigs_addopt($options, count($options), $long_text, $long_val, $long_opt);
+			}
+		}
+	}
+}
+
+function routerconfigs_getopts_short(array &$options, $short) {
+	if (!preg_match("~[A-Za-z0-9:]~", $short)) {
+		routerconfigs_fail(EXIT_OPTERR,$short);
+	}
+
+	$options = array();
+	for ($loop = 0; $loop < strlen($short); $loop++) {
+		$short_text = $short[$loop];
+		$short_val = routerconfigs_checkopt('value', $short, $loop);
+		$short_opt = routerconfigs_checkopt('value', $short, $loop);
+
+		routerconfigs_addopt($options, $loop, $short_text, $short_val, $short_opt);
+	}
+}
+
+function routerconfigs_getopts_find($arg, array $options) {
+	$found = null;
+
+	if (strlen($arg) && $arg[0] == '-') {
+		while (strlen($arg) && $arg[0] == '-') {
+			$arg = substr($arg,1);
+		}
+
+		foreach ($options as $option) {
+			if ($arg == $option['text']) {
+				$found = $option;
+				unset($found['result']);
+			}
+
+			$length_arg = strlen($arg);
+			$length_txt = strlen($option['text']);
+			$substr_txt = substr($arg,0,$length_txt);
+			//echo sprintf("%3d arg, %3d txt, %15s = %s\n", $length_arg, $length_txt, $option['text'], $substr_txt);
+			if ($length_arg > $length_txt && $substr_txt == $option['text']) {
+				$separator_pos = strlen($option['text']);
+				$separator = $arg[$separator_pos];
+				//echo "$arg $separator found\n";
+				if ($separator == '=') {
+					$found = $option;
+					$separator_pos++;
+					if ($separator_pos < strlen($arg)) {
+						$substr_txt = substr($arg, $separator_pos);
+						//echo "Setting $substr_txt\n";
+						$found['result'] = $substr_txt;
+					} else {
+						//echo "Unsetting result\n";
+						unset($found['result']);
+					}
+				}
+			}
+		}
+	}
+	//echo sprintf("routerconfigs_getopts_find('%s', options()) return %s%s\n",
+	//	$arg,
+	//	$found == null ? '<null>' : str_replace("\n","",var_export($found, true)),
+	//	$found == null ? '' : ' '.(isset($found['result']) ? str_replace("\n","",var_export($found,true)) : '<null>'));
+	return $found;
+}
+
+function routerconfigs_addopt(array &$options, $index, $text, $val, $opt) {
+	$option = array(
+		'text' => $text,
+		'value' => $val,
+		'optional' => $opt
+	);
+
+	//echo sprintf("Adding option %2s (%3d%s%s)\n", $text, $index, ($val?' hasValue':''), ($opt?' hasOptional':''));
+	$options[] = $option;
+}
+
+function routerconfigs_checkopt($label, $short, &$index) {
+	$result = false;
+	$colon = '<unset>';
+
+	if ($index < strlen($short) - 1) {
+		$colon = $short[$index+1];
+		if ($colon == ':') {
+			$index++;
+			$result = true;
+		}
+	}
+	//echo sprintf("%15s routerconfigs_checkopt('%s', %3d) returned %-5s (%s)\n", $label, $short, $index, $result ? 'Yes' : 'No', $colon);
+	return $result;
+}
+
+function routerconfigs_checkopt_string($label, &$text) {
+	$result = false;
+	$output = $text;
+	$colon = '<unset>';
+
+	if (strlen($text) > 1) {
+		$colon = $text[strlen($text) - 1];
+		if ($colon == ':') {
+			$result = true;
+			$output = substr($text, 0, - 1);
+		}
+	}
+	//echo sprintf("%15s routerconfigs_checkopt_string('%s returned %-5s (%s - %s)\n", $label, $text . '\')', $result ? 'Yes' : 'No', $colon, $output);
+	$text = $output;
+	return $result;
+}
