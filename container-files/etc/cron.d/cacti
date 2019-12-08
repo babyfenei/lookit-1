@@ -1,4 +1,2 @@
 */5     *       *       *       *     root php $path/poller.php > /dev/null 2>&1
-01      00      *     	*      	*   	root /bash/backup.sh > /dev/null 2>&1
-01      00      *       *       *   	root /bash/export.sh > /dev/null 2>&1
 */5     *       *       *       *     root /usr/sbin/ntpdate time.windows.com > /dev/null 2>&1

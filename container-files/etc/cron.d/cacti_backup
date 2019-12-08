@@ -1,0 +1,1 @@
+01      00      *       *       *       root /bash/backup.sh > /dev/null 2>&1
