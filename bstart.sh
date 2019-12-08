@@ -57,7 +57,7 @@ path=/var/www/html
 dir_path=$(pwd)
 mkdir -p $dir_path/container-files/packages/{rrdtool,cacti,spine}
 #Please enter the characters you want to modify, which can be chinese. After the input (input enter special characters please add in front of two escape character \\)
-rrdlogo="Cacti-$CACTI_VER\\/rrdtool-$RRDTOOL_VER\\/By:Fenei"
+rrdlogo="Cacti-$CACTI_VER\\/rrdtool-$RRD_VER\\/By:Fenei"
 echo -e "\033[35m The RRDTOOL watermark you want to modify is:$rrdlogo \033[0m"
 echo -e "\033[35m Your Cacti installation path is:$path \033[0m"
 # Bash Colors
