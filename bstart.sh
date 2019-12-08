@@ -2,12 +2,12 @@
 
 
 printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-printf "             +       Pls. input cacti version.Ente is laster         +\n"
+printf "             +       Pls. input cacti version.Ente is latest         +\n"
 printf "             +             eg：1.1.30    1.2.6   1.2.7               +\n"
 printf "             +++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
 read CACTI_VER
 if [ ! -n "$Ver" ];then
-        CACTI_VER=laster
+        CACTI_VER=latest
 fi
 
 
